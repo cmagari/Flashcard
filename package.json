@@ -1,0 +1,19 @@
+{
+  "name": "flashcard",
+  "private": true,
+  "version": "0.1.0",
+  "scripts": {
+    "install:all": "npm --prefix frontend install && npm --prefix electron install && uv --directory backend sync",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:electron": "wait-on tcp:5183 && cross-env NODE_ENV=development npm --prefix electron run start",
+    "dev": "concurrently --names \"frontend,electron\" --prefix-colors \"cyan,magenta\" --kill-others-on-fail \"npm:dev:frontend\" \"npm:dev:electron\"",
+    "build:frontend": "npm --prefix frontend run build",
+    "start": "npm --prefix electron run start",
+    "test:backend": "uv --directory backend run pytest"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3",
+    "wait-on": "^8.0.1"
+  }
+}

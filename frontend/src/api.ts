@@ -1,0 +1,175 @@
+declare global {
+  interface Window {
+    flashcardApi?: {
+      baseUrl: string;
+      openPath?: (path: string) => Promise<string>;
+    };
+  }
+}
+
+export interface AppInfo {
+  data_dir: string;
+  db_path: string;
+  images_dir: string;
+}
+
+export function apiBaseUrl(): string {
+  if (typeof window !== "undefined" && window.flashcardApi?.baseUrl) {
+    return window.flashcardApi.baseUrl;
+  }
+  // dev fallback when running Vite without Electron
+  return "http://127.0.0.1:8123";
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(apiBaseUrl() + path, {
+    ...init,
+    headers: {
+      "Content-Type": "application/json",
+      ...(init?.headers ?? {}),
+    },
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`${res.status} ${res.statusText}: ${text}`);
+  }
+  if (res.status === 204) return undefined as T;
+  return res.json() as Promise<T>;
+}
+
+export interface Subject {
+  id: number;
+  name: string;
+  created_at: string;
+  card_count: number;
+}
+
+export interface Tag {
+  id: number;
+  name: string;
+  usage_count: number;
+}
+
+export interface Attempt {
+  id: number;
+  result: "correct" | "incorrect";
+  created_at: string;
+}
+
+export interface CardSummary {
+  id: number;
+  subject_id: number;
+  subject_name: string;
+  front_md: string;
+  back_md: string;
+  tags: string[];
+  updated_at: string;
+}
+
+export interface Card extends CardSummary {
+  created_at: string;
+  last10_attempts: Attempt[];
+}
+
+export interface UploadedImage {
+  id: string;
+  ext: string;
+  filename: string;
+}
+
+export const api = {
+  info: () => request<AppInfo>("/api/info"),
+
+  // subjects
+  listSubjects: () => request<Subject[]>("/api/subjects"),
+  createSubject: (name: string) =>
+    request<Subject>("/api/subjects", { method: "POST", body: JSON.stringify({ name }) }),
+  renameSubject: (id: number, name: string) =>
+    request<Subject>(`/api/subjects/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ name }),
+    }),
+  deleteSubject: (id: number) =>
+    request<void>(`/api/subjects/${id}`, { method: "DELETE" }),
+
+  // tags
+  listTags: () => request<Tag[]>("/api/tags"),
+
+  // cards
+  listCards: (params: { subject_id?: number; tag_ids?: number[]; q?: string } = {}) => {
+    const search = new URLSearchParams();
+    if (params.subject_id != null) search.set("subject_id", String(params.subject_id));
+    if (params.tag_ids?.length) {
+      for (const t of params.tag_ids) search.append("tag_ids", String(t));
+    }
+    if (params.q) search.set("q", params.q);
+    const qs = search.toString();
+    return request<CardSummary[]>(`/api/cards${qs ? "?" + qs : ""}`);
+  },
+  getCard: (id: number) => request<Card>(`/api/cards/${id}`),
+  createCard: (data: {
+    subject_id: number;
+    front_md: string;
+    back_md: string;
+    tag_names: string[];
+  }) =>
+    request<Card>("/api/cards", { method: "POST", body: JSON.stringify(data) }),
+  updateCard: (
+    id: number,
+    data: Partial<{
+      subject_id: number;
+      front_md: string;
+      back_md: string;
+      tag_names: string[];
+    }>,
+  ) =>
+    request<Card>(`/api/cards/${id}`, {
+      method: "PATCH",
+      body: JSON.stringify(data),
+    }),
+  deleteCard: (id: number) =>
+    request<void>(`/api/cards/${id}`, { method: "DELETE" }),
+
+  // images
+  uploadImage: async (file: File | Blob): Promise<UploadedImage> => {
+    const fd = new FormData();
+    fd.append("file", file, "upload");
+    const res = await fetch(apiBaseUrl() + "/api/images", { method: "POST", body: fd });
+    if (!res.ok) throw new Error(`Image upload failed: ${res.status}`);
+    return res.json();
+  },
+  uploadImageFromUrl: (url: string) =>
+    request<UploadedImage>("/api/images/from-url", {
+      method: "POST",
+      body: JSON.stringify({ url }),
+    }),
+  listOrphanImages: () =>
+    request<{ count: number; filenames: string[] }>("/api/images/orphans"),
+  cleanupOrphanImages: () =>
+    request<{ deleted: number; filenames: string[] }>("/api/images/cleanup", {
+      method: "POST",
+    }),
+  imageUrl: (filename: string) => `${apiBaseUrl()}/api/images/${filename}`,
+
+  // practice
+  nextCard: (params: {
+    mode: "random" | "inorder" | "smart";
+    subject_id?: number;
+    tag_ids?: number[];
+    cursor_id?: number;
+  }) => {
+    const search = new URLSearchParams();
+    search.set("mode", params.mode);
+    if (params.subject_id != null) search.set("subject_id", String(params.subject_id));
+    if (params.cursor_id != null) search.set("cursor_id", String(params.cursor_id));
+    if (params.tag_ids?.length) {
+      for (const t of params.tag_ids) search.append("tag_ids", String(t));
+    }
+    return request<Card | null>(`/api/practice/next?${search.toString()}`);
+  },
+  recordAttempt: (card_id: number, result: "correct" | "incorrect") =>
+    request<Card>("/api/practice/attempt", {
+      method: "POST",
+      body: JSON.stringify({ card_id, result }),
+    }),
+};
