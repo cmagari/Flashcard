@@ -2,12 +2,59 @@
   "name": "flashcard-electron",
   "private": true,
   "version": "0.1.0",
+  "description": "Local-only desktop flashcard app with Markdown + LaTeX rendering and recency/performance-weighted practice mode.",
+  "author": {
+    "name": "Cameron Magari",
+    "email": "cmagari@gmail.com"
+  },
   "main": "main.js",
   "scripts": {
-    "start": "electron ."
+    "start": "electron .",
+    "dist": "electron-builder"
   },
-  "dependencies": {},
   "devDependencies": {
-    "electron": "^33.2.0"
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "com.flashcard.app",
+    "productName": "Flashcard",
+    "asar": true,
+    "directories": {
+      "output": "../release"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "icon.png",
+      "icon.ico",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "../frontend/dist",
+        "to": "frontend"
+      },
+      {
+        "from": "../backend/dist/flashcard-backend",
+        "to": "backend"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "shortcutName": "Flashcard"
+    }
   }
 }

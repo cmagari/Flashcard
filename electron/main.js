@@ -5,7 +5,10 @@ const path = require("node:path");
 const http = require("node:http");
 
 const isDev = !app.isPackaged && process.env.NODE_ENV !== "production";
-const ICON_PATH = path.join(__dirname, "icon.png");
+const ICON_PATH = path.join(
+  __dirname,
+  process.platform === "win32" ? "icon.ico" : "icon.png",
+);
 
 Menu.setApplicationMenu(null);
 
@@ -67,21 +70,36 @@ function waitForHealth(port, attempts = 100) {
 async function startBackend() {
   const port = await findFreePort();
   backendPort = port;
-  const backendDir = path.resolve(__dirname, "..", "backend");
-  const args = [
-    "run",
-    "uvicorn",
-    "app.main:app",
-    "--host",
-    "127.0.0.1",
-    "--port",
-    String(port),
-  ];
-  if (isDev) args.push("--reload");
-  console.log(`[backend] uv ${args.join(" ")} (cwd=${backendDir})`);
-  backendProcess = spawn("uv", args, {
-    cwd: backendDir,
-    shell: process.platform === "win32",
+
+  let cmd;
+  let args;
+  let cwd;
+  if (isDev) {
+    cwd = path.resolve(__dirname, "..", "backend");
+    cmd = "uv";
+    args = [
+      "run",
+      "uvicorn",
+      "app.main:app",
+      "--host",
+      "127.0.0.1",
+      "--port",
+      String(port),
+      "--reload",
+    ];
+  } else {
+    const exeName =
+      process.platform === "win32" ? "flashcard-backend.exe" : "flashcard-backend";
+    const bundledExe = path.join(process.resourcesPath, "backend", exeName);
+    cwd = path.dirname(bundledExe);
+    cmd = bundledExe;
+    args = ["--host", "127.0.0.1", "--port", String(port)];
+  }
+
+  console.log(`[backend] ${cmd} ${args.join(" ")} (cwd=${cwd})`);
+  backendProcess = spawn(cmd, args, {
+    cwd,
+    shell: isDev && process.platform === "win32",
     env: {
       ...process.env,
       FLASHCARD_CORS_ORIGINS:
@@ -131,7 +149,9 @@ async function createWindow() {
   if (isDev) {
     await mainWindow.loadURL("http://localhost:5183");
   } else {
-    await mainWindow.loadFile(path.join(__dirname, "..", "frontend", "dist", "index.html"));
+    await mainWindow.loadFile(
+      path.join(process.resourcesPath, "frontend", "index.html"),
+    );
   }
 
   mainWindow.on("closed", () => {
