@@ -102,8 +102,10 @@ async function startBackend() {
     shell: isDev && process.platform === "win32",
     env: {
       ...process.env,
-      FLASHCARD_CORS_ORIGINS:
-        "http://localhost:5183,http://127.0.0.1:5183,file://",
+      // Backend listens on 127.0.0.1 only. The renderer runs from file:// in
+      // packaged mode, which sends Origin: null. Easiest correct CORS for a
+      // local desktop app is allow-all.
+      FLASHCARD_CORS_ORIGINS: "*",
     },
   });
   backendProcess.stdout.on("data", (d) =>
@@ -142,6 +144,7 @@ async function createWindow() {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
+      devTools: isDev,
       additionalArguments: [`--flashcard-base-url=http://127.0.0.1:${backendPort}`],
     },
   });
