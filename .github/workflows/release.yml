@@ -1,0 +1,59 @@
+name: Release
+
+# Triggers on a version tag push, e.g. `git tag v0.2.0 && git push origin v0.2.0`.
+# Builds the Windows installer in a clean windows-latest runner and attaches
+# `release/Flashcard Setup x.y.z.exe` to a GitHub Release named after the tag.
+#
+# Bump `version` in package.json AND electron/package.json before tagging so
+# the artifact filename matches the tag.
+
+"on":
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # electron-builder unpacks winCodeSign, which contains macOS .dylib
+      # symlinks. Creating symlinks on Windows normally requires admin or
+      # Developer Mode; setting this registry flag enables it for the runner.
+      - name: Enable symlink creation (Developer Mode flag)
+        shell: pwsh
+        run: |
+          New-ItemProperty `
+            -Path "HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" `
+            -Name "AllowDevelopmentWithoutDevLicense" `
+            -Value 1 -PropertyType DWord -Force | Out-Null
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      # uv provisions Python automatically based on backend/pyproject.toml
+      # (requires-python >=3.10). No separate setup-python action needed.
+      - uses: astral-sh/setup-uv@v3
+        with:
+          enable-cache: true
+
+      - name: Install all deps
+        run: npm run install:all
+
+      # `build` chains: test:backend → build:frontend → build:backend → build:installer
+      - name: Build (pytest + frontend + backend + installer)
+        run: npm run build
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release/*.exe
+          draft: false
+          prerelease: false
+          generate_release_notes: true

@@ -2,6 +2,17 @@
 
 A local-only desktop flashcard app: Electron + React (Vite + Tailwind) frontend, Python FastAPI backend, SQLite storage. Markdown and LaTeX (KaTeX) rendering, image paste/drop, three practice modes (random, in-order, smart).
 
+## Download (Windows)
+
+Pre-built installers are attached to each [release](https://github.com/cmagari/Flashcard/releases) — grab the latest `Flashcard Setup x.y.z.exe` and run it.
+
+The installer is **unsigned** (no code-signing certificate), so Windows SmartScreen will show *"Windows protected your PC"* the first time you run it. To proceed:
+
+1. Click **More info**
+2. Click **Run anyway**
+
+The build is reproducible: every release is built in GitHub Actions on `windows-latest` from a tagged commit (`.github/workflows/release.yml`).
+
 ## Prerequisites
 
 - Node.js 18+
@@ -77,6 +88,19 @@ release/
 ```
 
 The installer prompts for an install location, installs the app per-user, and creates a Start menu + desktop shortcut named "Flashcard". On launch the app spawns the bundled `flashcard-backend.exe` from `resources/backend/`, waits for `/health`, then loads `resources/frontend/index.html`.
+
+### Cutting a release
+
+GitHub Actions builds a Windows installer and publishes it as a Release whenever a `v*` tag is pushed.
+
+1. Bump `version` in both `package.json` and `electron/package.json` so the artifact filename matches the tag (electron-builder names the `.exe` from `electron/package.json`).
+2. Commit the bump.
+3. Tag + push:
+   ```bash
+   git tag v0.2.0
+   git push origin v0.2.0
+   ```
+4. The [`Release` workflow](.github/workflows/release.yml) runs `npm run install:all && npm run build` on `windows-latest` (which includes `npm run test:backend` as the first step) and creates a Release with the installer attached.
 
 ## Storage
 
