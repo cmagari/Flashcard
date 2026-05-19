@@ -1,9 +1,13 @@
 const { contextBridge, ipcRenderer } = require("electron");
 
-const arg = process.argv.find((a) => a.startsWith("--flashcard-base-url="));
-const baseUrl = arg ? arg.slice("--flashcard-base-url=".length) : "";
+const baseUrl = ipcRenderer.sendSync("flashcard:base-url-sync");
 
 contextBridge.exposeInMainWorld("flashcardApi", {
   baseUrl,
+  getBaseUrl: () => ipcRenderer.invoke("flashcard:base-url"),
   openPath: (p) => ipcRenderer.invoke("flashcard:open-path", p),
+  getDataDirOverride: () => ipcRenderer.invoke("flashcard:get-data-dir-override"),
+  chooseDataDir: () => ipcRenderer.invoke("flashcard:choose-data-dir"),
+  setDataDir: (dir) => ipcRenderer.invoke("flashcard:set-data-dir", dir),
+  resetDataDir: () => ipcRenderer.invoke("flashcard:reset-data-dir"),
 });

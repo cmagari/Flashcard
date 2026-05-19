@@ -86,6 +86,8 @@ App data lives at `%APPDATA%\Flashcard\Flashcard\` on Windows (or the `platformd
 
 Override via `FLASHCARD_DATA_DIR` env var (used by the test suite). The Settings page in the app shows these paths and has buttons to open them in the OS file manager.
 
+You can also pick a custom data folder from the Settings page ("Data folder → Choose folder…"). The choice is persisted in Electron's `userData/config.json` and is passed to the backend as `FLASHCARD_DATA_DIR` on every launch. "Reset to default" clears the override. Switching folders restarts the backend.
+
 ## Practice modes
 
 - **Random** — uniform random pick from the filtered pool.

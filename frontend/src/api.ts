@@ -2,7 +2,12 @@ declare global {
   interface Window {
     flashcardApi?: {
       baseUrl: string;
+      getBaseUrl?: () => Promise<string>;
       openPath?: (path: string) => Promise<string>;
+      getDataDirOverride?: () => Promise<string | null>;
+      chooseDataDir?: () => Promise<string | null>;
+      setDataDir?: (dir: string) => Promise<string>;
+      resetDataDir?: () => Promise<string>;
     };
   }
 }
@@ -13,12 +18,16 @@ export interface AppInfo {
   images_dir: string;
 }
 
+let cachedBaseUrl: string =
+  (typeof window !== "undefined" && window.flashcardApi?.baseUrl) ||
+  "http://127.0.0.1:8123";
+
 export function apiBaseUrl(): string {
-  if (typeof window !== "undefined" && window.flashcardApi?.baseUrl) {
-    return window.flashcardApi.baseUrl;
-  }
-  // dev fallback when running Vite without Electron
-  return "http://127.0.0.1:8123";
+  return cachedBaseUrl;
+}
+
+export function setApiBaseUrl(url: string) {
+  if (url) cachedBaseUrl = url;
 }
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
