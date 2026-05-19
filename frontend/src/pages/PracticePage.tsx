@@ -1,14 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api, Card, Subject, Tag } from "../api";
 import MarkdownView from "../components/MarkdownView";
 
 type Mode = "random" | "inorder" | "smart";
 
 export default function PracticePage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
 
-  const [subjectId, setSubjectId] = useState<number | "">("");
+  const initialSubject = (() => {
+    const v = searchParams.get("subject");
+    if (!v) return "" as number | "";
+    const n = Number(v);
+    return Number.isFinite(n) ? n : "";
+  })();
+  const [subjectId, setSubjectId] = useState<number | "">(initialSubject);
   const [tagIds, setTagIds] = useState<number[]>([]);
   const [mode, setMode] = useState<Mode>("smart");
 
@@ -129,9 +137,19 @@ export default function PracticePage() {
               <span className="text-zinc-400">Subject</span>
               <select
                 value={subjectId}
-                onChange={(e) =>
-                  setSubjectId(e.target.value === "" ? "" : Number(e.target.value))
-                }
+                onChange={(e) => {
+                  const v = e.target.value === "" ? "" : Number(e.target.value);
+                  setSubjectId(v);
+                  setSearchParams(
+                    (prev) => {
+                      const next = new URLSearchParams(prev);
+                      if (v === "") next.delete("subject");
+                      else next.set("subject", String(v));
+                      return next;
+                    },
+                    { replace: true },
+                  );
+                }}
                 className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm"
               >
                 <option value="">All</option>

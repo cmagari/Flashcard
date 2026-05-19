@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { api, Subject } from "../api";
 import { useConfirm } from "../components/Dialog";
+import { PracticeIcon } from "../components/Icons";
 
 export default function SubjectsPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
@@ -170,6 +171,22 @@ function SubjectRow({ subject, onRenamed, onDeleted, onError }: RowProps) {
           <span className="text-xs text-zinc-500">
             {subject.card_count} card{subject.card_count === 1 ? "" : "s"}
           </span>
+          <Link
+            to={`/practice?subject=${subject.id}`}
+            className="inline-flex items-center gap-1 rounded border border-zinc-700 px-2 py-1 text-xs hover:bg-zinc-800"
+            title={
+              subject.card_count === 0
+                ? "No cards in this subject"
+                : `Practice ${subject.name}`
+            }
+            onClick={(e) => {
+              if (subject.card_count === 0) e.preventDefault();
+            }}
+            aria-disabled={subject.card_count === 0}
+          >
+            <PracticeIcon width={12} height={12} />
+            Practice
+          </Link>
           <button
             onClick={startEdit}
             className="rounded border border-zinc-700 px-2 py-1 text-xs hover:bg-zinc-800"

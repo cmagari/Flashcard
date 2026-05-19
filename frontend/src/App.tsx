@@ -23,13 +23,13 @@ export default function App() {
       <header className="flex items-center gap-2 border-b border-zinc-800 px-4 py-2">
         <span className="text-lg font-semibold text-blue-400">Flashcard</span>
         <nav className="ml-4 flex flex-1 gap-1">
-          <NavLink to="/cards" className={navClass}>
-            <CardsIcon />
-            Cards
-          </NavLink>
           <NavLink to="/subjects" className={navClass}>
             <SubjectsIcon />
             Subjects
+          </NavLink>
+          <NavLink to="/cards" className={navClass}>
+            <CardsIcon />
+            Cards
           </NavLink>
           <NavLink to="/practice" className={navClass}>
             <PracticeIcon />
@@ -43,7 +43,7 @@ export default function App() {
       </header>
       <main className="flex-1 overflow-auto">
         <Routes>
-          <Route path="/" element={<Navigate to="/cards" replace />} />
+          <Route path="/" element={<Navigate to="/subjects" replace />} />
           <Route path="/cards" element={<CardsPage />} />
           <Route path="/cards/new" element={<CardEditPage />} />
           <Route path="/cards/:id" element={<CardEditPage />} />
