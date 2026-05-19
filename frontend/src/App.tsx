@@ -5,9 +5,15 @@ import CardsPage from "./pages/CardsPage";
 import CardEditPage from "./pages/CardEditPage";
 import PracticePage from "./pages/PracticePage";
 import SettingsPage from "./pages/SettingsPage";
+import {
+  CardsIcon,
+  PracticeIcon,
+  SettingsIcon,
+  SubjectsIcon,
+} from "./components/Icons";
 
 const navClass = ({ isActive }: { isActive: boolean }) =>
-  `px-3 py-1.5 rounded text-sm ${
+  `inline-flex items-center gap-1.5 px-3 py-1.5 rounded text-sm ${
     isActive ? "bg-blue-600 text-white" : "text-zinc-300 hover:bg-zinc-800"
   }`;
 
@@ -17,11 +23,23 @@ export default function App() {
       <header className="flex items-center gap-2 border-b border-zinc-800 px-4 py-2">
         <span className="text-lg font-semibold text-blue-400">Flashcard</span>
         <nav className="ml-4 flex flex-1 gap-1">
-          <NavLink to="/cards" className={navClass}>Cards</NavLink>
-          <NavLink to="/subjects" className={navClass}>Subjects</NavLink>
-          <NavLink to="/practice" className={navClass}>Practice</NavLink>
+          <NavLink to="/cards" className={navClass}>
+            <CardsIcon />
+            Cards
+          </NavLink>
+          <NavLink to="/subjects" className={navClass}>
+            <SubjectsIcon />
+            Subjects
+          </NavLink>
+          <NavLink to="/practice" className={navClass}>
+            <PracticeIcon />
+            Practice
+          </NavLink>
         </nav>
-        <NavLink to="/settings" className={navClass}>Settings</NavLink>
+        <NavLink to="/settings" className={navClass}>
+          <SettingsIcon />
+          Settings
+        </NavLink>
       </header>
       <main className="flex-1 overflow-auto">
         <Routes>
