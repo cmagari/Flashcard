@@ -172,8 +172,8 @@ function SubjectRow({ subject, onRenamed, onDeleted, onError }: RowProps) {
             {subject.card_count} card{subject.card_count === 1 ? "" : "s"}
           </span>
           <Link
-            to={`/practice?subject=${subject.id}`}
-            className="inline-flex items-center gap-1 rounded border border-zinc-700 px-2 py-1 text-xs hover:bg-zinc-800"
+            to={`/practice?subject=${subject.id}&auto=1`}
+            className="inline-flex items-center gap-1 rounded border border-blue-700/60 px-2 py-1 text-xs text-blue-200 hover:bg-blue-900/30"
             title={
               subject.card_count === 0
                 ? "No cards in this subject"

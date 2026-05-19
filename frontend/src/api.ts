@@ -203,6 +203,7 @@ export const api = {
     subject_id?: number;
     tag_ids?: number[];
     cursor_id?: number;
+    exclude_ids?: number[];
   }) => {
     const search = new URLSearchParams();
     search.set("mode", params.mode);
@@ -210,6 +211,9 @@ export const api = {
     if (params.cursor_id != null) search.set("cursor_id", String(params.cursor_id));
     if (params.tag_ids?.length) {
       for (const t of params.tag_ids) search.append("tag_ids", String(t));
+    }
+    if (params.exclude_ids?.length) {
+      for (const id of params.exclude_ids) search.append("exclude_ids", String(id));
     }
     return request<Card | null>(`/api/practice/next?${search.toString()}`);
   },

@@ -61,7 +61,7 @@ export default function HomePage() {
       <header className="flex items-center justify-between">
         <h1 className="text-xl font-semibold">Home</h1>
         <Link
-          to="/practice"
+          to="/practice?auto=1"
           className={
             "inline-flex items-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium " +
             (empty
@@ -183,10 +183,10 @@ function SubjectRow({ subject }: { subject: SubjectMastery }) {
         </span>
       </div>
       <Link
-        to={`/practice?subject=${subject.id}`}
+        to={`/practice?subject=${subject.id}&auto=1`}
         className={
-          "inline-flex items-center gap-1 rounded border border-zinc-700 px-2 py-1 text-xs " +
-          (empty ? "opacity-50" : "hover:bg-zinc-800")
+          "inline-flex items-center gap-1 rounded border border-blue-700/60 px-2 py-1 text-xs text-blue-200 " +
+          (empty ? "opacity-50" : "hover:bg-blue-900/30")
         }
         onClick={(e) => {
           if (empty) e.preventDefault();
@@ -247,8 +247,8 @@ function ReviewRow({ card }: { card: ReviewCard }) {
         {card.subject_name}
       </span>
       <Link
-        to={`/practice?subject=${card.subject_id}`}
-        className="inline-flex items-center gap-1 rounded border border-zinc-700 px-2 py-1 text-xs hover:bg-zinc-800"
+        to={`/practice?subject=${card.subject_id}&auto=1`}
+        className="inline-flex items-center gap-1 rounded border border-blue-700/60 px-2 py-1 text-xs text-blue-200 hover:bg-blue-900/30"
         title={`Practice ${card.subject_name}`}
       >
         <PracticeIcon width={12} height={12} />

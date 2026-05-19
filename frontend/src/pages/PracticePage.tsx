@@ -1,9 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, Card, Subject, Tag } from "../api";
 import MarkdownView from "../components/MarkdownView";
 
 type Mode = "random" | "inorder" | "smart";
+
+// In smart mode, a card is considered "mastered for this session" once the
+// user has answered it correctly this many times, and is excluded from
+// subsequent picks. Wrong answers don't count — unlimited retries are fine.
+const SESSION_MASTERY_THRESHOLD = 2;
 
 export default function PracticePage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -28,6 +33,12 @@ export default function PracticePage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // sessionCorrects is mirrored in a ref so fetchNext can read the latest
+  // value synchronously after record() updates state — useState alone would
+  // leave fetchNext's closure one render behind.
+  const sessionCorrectsRef = useRef<Record<number, number>>({});
+  const [masteredCount, setMasteredCount] = useState(0);
+
   useEffect(() => {
     api.listSubjects().then(setSubjects).catch(() => {});
     api.listTags().then(setTags).catch(() => {});
@@ -37,11 +48,18 @@ export default function PracticePage() {
     async (cursorId?: number) => {
       setBusy(true);
       try {
+        const excludeIds =
+          mode === "smart"
+            ? Object.entries(sessionCorrectsRef.current)
+                .filter(([, n]) => n >= SESSION_MASTERY_THRESHOLD)
+                .map(([id]) => Number(id))
+            : undefined;
         const next = await api.nextCard({
           mode,
           subject_id: subjectId === "" ? undefined : subjectId,
           tag_ids: tagIds.length ? tagIds : undefined,
           cursor_id: cursorId,
+          exclude_ids: excludeIds,
         });
         if (!next) {
           setCard(null);
@@ -61,18 +79,42 @@ export default function PracticePage() {
     [mode, subjectId, tagIds],
   );
 
-  function start() {
-    setStarted(true);
+  function resetSession() {
+    sessionCorrectsRef.current = {};
+    setMasteredCount(0);
     setCounts({ correct: 0, incorrect: 0, skipped: 0 });
     setDone(false);
+  }
+
+  function start() {
+    resetSession();
+    setStarted(true);
     fetchNext();
   }
 
+  const autoStartedRef = useRef(false);
+  useEffect(() => {
+    if (autoStartedRef.current) return;
+    if (searchParams.get("auto") !== "1") return;
+    autoStartedRef.current = true;
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        next.delete("auto");
+        return next;
+      },
+      { replace: true },
+    );
+    resetSession();
+    setStarted(true);
+    fetchNext();
+  }, [searchParams, setSearchParams, fetchNext]);
+
   function quit() {
+    resetSession();
     setStarted(false);
     setCard(null);
     setShowBack(false);
-    setDone(false);
   }
 
   async function record(result: "correct" | "incorrect") {
@@ -80,6 +122,15 @@ export default function PracticePage() {
     try {
       await api.recordAttempt(card.id, result);
       setCounts((c) => ({ ...c, [result]: c[result] + 1 }));
+      if (result === "correct") {
+        const cur = sessionCorrectsRef.current;
+        const prevCount = cur[card.id] ?? 0;
+        const nextCount = prevCount + 1;
+        cur[card.id] = nextCount;
+        if (nextCount === SESSION_MASTERY_THRESHOLD) {
+          setMasteredCount((n) => n + 1);
+        }
+      }
       if (mode === "inorder") {
         fetchNext(card.id);
       } else {
@@ -218,6 +269,17 @@ export default function PracticePage() {
         <span className="text-green-400">✓ {counts.correct}</span>
         <span className="text-red-400">✗ {counts.incorrect}</span>
         <span className="text-zinc-400">⤼ {counts.skipped}</span>
+        {mode === "smart" && (
+          <>
+            <span className="text-zinc-500">·</span>
+            <span
+              className="text-emerald-400"
+              title={`Cards with ${SESSION_MASTERY_THRESHOLD}+ correct answers this session — excluded from further smart picks`}
+            >
+              ★ {masteredCount} mastered
+            </span>
+          </>
+        )}
         <div className="flex-1" />
         <button
           onClick={quit}

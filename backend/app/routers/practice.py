@@ -43,12 +43,15 @@ def next_card(
     subject_id: int | None = None,
     tag_ids: list[int] | None = Query(default=None),
     cursor_id: int | None = None,
+    exclude_ids: list[int] | None = Query(default=None),
     session: Session = Depends(get_session),
 ):
     if mode not in {"random", "inorder", "smart"}:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Invalid mode")
 
     stmt = _filtered_cards_query(session, subject_id, tag_ids or [])
+    if exclude_ids:
+        stmt = stmt.where(Card.id.notin_(exclude_ids))
 
     if mode == "inorder":
         stmt = stmt.order_by(Card.created_at.asc(), Card.id.asc())
