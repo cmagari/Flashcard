@@ -44,13 +44,14 @@ The packaged app ships a self-contained Python interpreter (via PyInstaller) and
 npm run build
 ```
 
-This runs three steps in order:
+This runs four steps in order:
 
 | Step | Script | What it does |
 | --- | --- | --- |
-| 1 | `npm run build:frontend` | Vite → `frontend/dist/` |
-| 2 | `npm run build:backend`  | PyInstaller → `backend/dist/flashcard-backend/flashcard-backend.exe` (with `_internal/` deps folder) |
-| 3 | `npm run build:installer` | electron-builder → `release/Flashcard Setup 0.1.0.exe` |
+| 1 | `npm run test:backend` | pytest — aborts the build if any test fails |
+| 2 | `npm run build:frontend` | `tsc -b` (type-check) + Vite → `frontend/dist/` |
+| 3 | `npm run build:backend`  | PyInstaller → `backend/dist/flashcard-backend/flashcard-backend.exe` (with `_internal/` deps folder) |
+| 4 | `npm run build:installer` | electron-builder → `release/Flashcard Setup 0.1.0.exe` |
 
 You can run any step on its own — useful when iterating on just the backend or frontend.
 

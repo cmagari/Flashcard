@@ -10,7 +10,7 @@
     "build:frontend": "npm --prefix frontend run build",
     "build:backend": "uv --directory backend run pyinstaller --noconfirm --clean --distpath dist --workpath build --name flashcard-backend --collect-data fastapi --collect-data uvicorn --collect-data starlette --collect-submodules uvicorn --collect-submodules pydantic --collect-data PIL --collect-data sqlalchemy launch.py",
     "build:installer": "npm --prefix electron run dist",
-    "build": "npm run build:frontend && npm run build:backend && npm run build:installer",
+    "build": "npm run test:backend && npm run build:frontend && npm run build:backend && npm run build:installer",
     "start": "npm --prefix electron run start",
     "test:backend": "uv --directory backend run pytest"
   },
