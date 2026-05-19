@@ -100,3 +100,40 @@ class PracticeNextQuery(BaseModel):
     subject_id: int | None = None
     tag_ids: list[int] = Field(default_factory=list)
     cursor_id: int | None = None  # for inorder mode
+
+
+MasteryName = Literal["memorized", "familiar", "learning", "new"]
+
+
+class MasteryCounts(BaseModel):
+    memorized: int = 0
+    familiar: int = 0
+    learning: int = 0
+    new: int = 0
+
+
+class HomeTotals(MasteryCounts):
+    subjects: int = 0
+    cards: int = 0
+
+
+class SubjectMastery(MasteryCounts):
+    id: int
+    name: str
+    card_count: int
+
+
+class ReviewCard(BaseModel):
+    id: int
+    subject_id: int
+    subject_name: str
+    front_md: str
+    tags: list[str]
+    weight: float
+    mastery: MasteryName
+
+
+class HomeStats(BaseModel):
+    totals: HomeTotals
+    subjects: list[SubjectMastery]
+    needs_review: list[ReviewCard]

@@ -8,7 +8,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from .db import init_db
-from .routers import cards, images, practice, subjects, tags
+from .routers import cards, images, practice, stats, subjects, tags
 from .storage import app_data_dir, db_path, images_dir
 
 logger = logging.getLogger("flashcard")
@@ -56,3 +56,4 @@ app.include_router(cards.router)
 app.include_router(tags.router)
 app.include_router(images.router)
 app.include_router(practice.router)
+app.include_router(stats.router)

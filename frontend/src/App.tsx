@@ -1,4 +1,5 @@
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
+import HomePage from "./pages/HomePage";
 import SubjectsPage from "./pages/SubjectsPage";
 import SubjectDetailPage from "./pages/SubjectDetailPage";
 import CardsPage from "./pages/CardsPage";
@@ -7,6 +8,7 @@ import PracticePage from "./pages/PracticePage";
 import SettingsPage from "./pages/SettingsPage";
 import {
   CardsIcon,
+  HomeIcon,
   PracticeIcon,
   SettingsIcon,
   SubjectsIcon,
@@ -23,6 +25,10 @@ export default function App() {
       <header className="flex items-center gap-2 border-b border-zinc-800 px-4 py-2">
         <span className="text-lg font-semibold text-blue-400">Flashcard</span>
         <nav className="ml-4 flex flex-1 gap-1">
+          <NavLink to="/home" className={navClass}>
+            <HomeIcon />
+            Home
+          </NavLink>
           <NavLink to="/subjects" className={navClass}>
             <SubjectsIcon />
             Subjects
@@ -43,7 +49,8 @@ export default function App() {
       </header>
       <main className="flex-1 overflow-auto">
         <Routes>
-          <Route path="/" element={<Navigate to="/subjects" replace />} />
+          <Route path="/" element={<Navigate to="/home" replace />} />
+          <Route path="/home" element={<HomePage />} />
           <Route path="/cards" element={<CardsPage />} />
           <Route path="/cards/new" element={<CardEditPage />} />
           <Route path="/cards/:id" element={<CardEditPage />} />

@@ -86,8 +86,45 @@ export interface UploadedImage {
   filename: string;
 }
 
+export type MasteryLevel = "memorized" | "familiar" | "learning" | "new";
+
+export interface MasteryCounts {
+  memorized: number;
+  familiar: number;
+  learning: number;
+  new: number;
+}
+
+export interface HomeTotals extends MasteryCounts {
+  subjects: number;
+  cards: number;
+}
+
+export interface SubjectMastery extends MasteryCounts {
+  id: number;
+  name: string;
+  card_count: number;
+}
+
+export interface ReviewCard {
+  id: number;
+  subject_id: number;
+  subject_name: string;
+  front_md: string;
+  tags: string[];
+  weight: number;
+  mastery: MasteryLevel;
+}
+
+export interface HomeStats {
+  totals: HomeTotals;
+  subjects: SubjectMastery[];
+  needs_review: ReviewCard[];
+}
+
 export const api = {
   info: () => request<AppInfo>("/api/info"),
+  homeStats: () => request<HomeStats>("/api/stats/home"),
 
   // subjects
   listSubjects: () => request<Subject[]>("/api/subjects"),
