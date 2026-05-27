@@ -55,6 +55,33 @@ export default function CardEditor({ label, value, onChange }: Props) {
     "(": ["(", ")"],
   };
 
+  function inMathContext(text: string, pos: number): boolean {
+    let i = 0;
+    let mode: "text" | "inline" | "block" = "text";
+    while (i < pos) {
+      const ch = text[i];
+      if (ch === "\\" && i + 1 < text.length) {
+        i += 2;
+        continue;
+      }
+      if (ch === "$") {
+        const isDouble = text[i + 1] === "$";
+        if (mode === "text") {
+          mode = isDouble ? "block" : "inline";
+          i += isDouble ? 2 : 1;
+        } else if (mode === "block") {
+          if (isDouble) { mode = "text"; i += 2; } else { i += 1; }
+        } else {
+          mode = "text";
+          i += 1;
+        }
+        continue;
+      }
+      i += 1;
+    }
+    return mode !== "text";
+  }
+
   function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
       const k = e.key.toLowerCase();
@@ -64,12 +91,14 @@ export default function CardEditor({ label, value, onChange }: Props) {
     }
     const ta = ref.current;
     if (!ta) return;
+    const pair = pairs[e.key];
+    if (!pair) return;
     if (ta.selectionStart !== ta.selectionEnd) {
-      const pair = pairs[e.key];
-      if (pair) {
-        e.preventDefault();
-        wrap(pair[0], pair[1]);
-      }
+      e.preventDefault();
+      wrap(pair[0], pair[1]);
+    } else if (e.key !== "$" && inMathContext(value, ta.selectionStart)) {
+      e.preventDefault();
+      wrap(pair[0], pair[1]);
     }
   }
 
