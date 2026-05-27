@@ -163,6 +163,9 @@ export default function SubjectDetailPage() {
           New card
         </Link>
       </div>
+      {subject?.description && (
+        <p className="text-sm text-zinc-400">{subject.description}</p>
+      )}
 
       <input
         value={q}

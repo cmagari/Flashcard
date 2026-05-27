@@ -49,6 +49,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export interface Subject {
   id: number;
   name: string;
+  description: string;
   created_at: string;
   card_count: number;
 }
@@ -128,12 +129,18 @@ export const api = {
 
   // subjects
   listSubjects: () => request<Subject[]>("/api/subjects"),
-  createSubject: (name: string) =>
-    request<Subject>("/api/subjects", { method: "POST", body: JSON.stringify({ name }) }),
-  renameSubject: (id: number, name: string) =>
+  createSubject: (name: string, description: string = "") =>
+    request<Subject>("/api/subjects", {
+      method: "POST",
+      body: JSON.stringify({ name, description }),
+    }),
+  updateSubject: (
+    id: number,
+    data: Partial<{ name: string; description: string }>,
+  ) =>
     request<Subject>(`/api/subjects/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ name }),
+      body: JSON.stringify(data),
     }),
   deleteSubject: (id: number) =>
     request<void>(`/api/subjects/${id}`, { method: "DELETE" }),

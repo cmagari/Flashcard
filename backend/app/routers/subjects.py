@@ -12,7 +12,13 @@ router = APIRouter(prefix="/api/subjects", tags=["subjects"])
 
 
 def _serialize(s: Subject, card_count: int) -> SubjectOut:
-    return SubjectOut(id=s.id, name=s.name, created_at=s.created_at, card_count=card_count)
+    return SubjectOut(
+        id=s.id,
+        name=s.name,
+        description=s.description,
+        created_at=s.created_at,
+        card_count=card_count,
+    )
 
 
 @router.get("", response_model=list[SubjectOut])
@@ -31,7 +37,7 @@ def create_subject(payload: SubjectCreate, session: Session = Depends(get_sessio
     name = payload.name.strip()
     if session.execute(select(Subject).where(Subject.name == name)).scalar_one_or_none():
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Subject with that name already exists")
-    s = Subject(name=name)
+    s = Subject(name=name, description=payload.description.strip())
     session.add(s)
     session.commit()
     session.refresh(s)
@@ -52,6 +58,8 @@ def update_subject(
         ).scalar_one_or_none():
             raise HTTPException(status.HTTP_409_CONFLICT, detail="Subject with that name already exists")
         s.name = new_name
+    if payload.description is not None:
+        s.description = payload.description.strip()
     session.commit()
     session.refresh(s)
     count = session.execute(

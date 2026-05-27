@@ -6,7 +6,8 @@ import { PracticeIcon } from "../components/Icons";
 
 export default function SubjectsPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [draft, setDraft] = useState("");
+  const [draftName, setDraftName] = useState("");
+  const [draftDescription, setDraftDescription] = useState("");
   const [error, setError] = useState<string | null>(null);
   const confirm = useConfirm();
 
@@ -23,14 +24,15 @@ export default function SubjectsPage() {
   }, []);
 
   async function add() {
-    const name = draft.trim();
+    const name = draftName.trim();
     if (!name) {
       setError("Type a subject name first.");
       return;
     }
     try {
-      await api.createSubject(name);
-      setDraft("");
+      await api.createSubject(name, draftDescription.trim());
+      setDraftName("");
+      setDraftDescription("");
       setError(null);
       refresh();
     } catch (err) {
@@ -57,20 +59,29 @@ export default function SubjectsPage() {
   return (
     <div className="mx-auto max-w-2xl space-y-4 p-6">
       <h1 className="text-xl font-semibold">Subjects</h1>
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2">
+        <div className="flex gap-2">
+          <input
+            value={draftName}
+            onChange={(e) => setDraftName(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && add()}
+            placeholder="New subject name"
+            className="flex-1 rounded border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm"
+          />
+          <button
+            onClick={add}
+            className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium hover:bg-blue-500"
+          >
+            Add
+          </button>
+        </div>
         <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          value={draftDescription}
+          onChange={(e) => setDraftDescription(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && add()}
-          placeholder="New subject name"
-          className="flex-1 rounded border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm"
+          placeholder="Description (optional)"
+          className="rounded border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm"
         />
-        <button
-          onClick={add}
-          className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium hover:bg-blue-500"
-        >
-          Add
-        </button>
       </div>
       {error && <p className="text-sm text-red-400">{error}</p>}
       <ul className="divide-y divide-zinc-800 rounded border border-zinc-800">
@@ -100,32 +111,41 @@ interface RowProps {
 
 function SubjectRow({ subject, onRenamed, onDeleted, onError }: RowProps) {
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState(subject.name);
+  const [nameDraft, setNameDraft] = useState(subject.name);
+  const [descDraft, setDescDraft] = useState(subject.description);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function startEdit() {
-    setDraft(subject.name);
+    setNameDraft(subject.name);
+    setDescDraft(subject.description);
     setEditing(true);
     requestAnimationFrame(() => inputRef.current?.focus());
   }
 
   function cancelEdit() {
     setEditing(false);
-    setDraft(subject.name);
+    setNameDraft(subject.name);
+    setDescDraft(subject.description);
   }
 
   async function save() {
-    const name = draft.trim();
+    const name = nameDraft.trim();
+    const description = descDraft.trim();
     if (!name) {
       onError("Subject name can't be empty.");
       return;
     }
-    if (name === subject.name) {
+    const nameChanged = name !== subject.name;
+    const descChanged = description !== subject.description;
+    if (!nameChanged && !descChanged) {
       setEditing(false);
       return;
     }
     try {
-      await api.renameSubject(subject.id, name);
+      await api.updateSubject(subject.id, {
+        ...(nameChanged ? { name } : {}),
+        ...(descChanged ? { description } : {}),
+      });
       setEditing(false);
       onRenamed();
     } catch (err) {
@@ -134,71 +154,88 @@ function SubjectRow({ subject, onRenamed, onDeleted, onError }: RowProps) {
   }
 
   return (
-    <li className="flex items-center gap-2 px-3 py-2">
+    <li className="flex flex-col gap-1 px-3 py-2">
       {editing ? (
         <>
+          <div className="flex items-center gap-2">
+            <input
+              ref={inputRef}
+              value={nameDraft}
+              onChange={(e) => setNameDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") save();
+                if (e.key === "Escape") cancelEdit();
+              }}
+              className="flex-1 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm"
+            />
+            <button
+              onClick={save}
+              className="rounded bg-blue-600 px-2 py-1 text-xs hover:bg-blue-500"
+            >
+              Save
+            </button>
+            <button
+              onClick={cancelEdit}
+              className="rounded border border-zinc-700 px-2 py-1 text-xs hover:bg-zinc-800"
+            >
+              Cancel
+            </button>
+          </div>
           <input
-            ref={inputRef}
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            value={descDraft}
+            onChange={(e) => setDescDraft(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter") save();
               if (e.key === "Escape") cancelEdit();
             }}
-            className="flex-1 rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm"
+            placeholder="Description (optional)"
+            className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm"
           />
-          <button
-            onClick={save}
-            className="rounded bg-blue-600 px-2 py-1 text-xs hover:bg-blue-500"
-          >
-            Save
-          </button>
-          <button
-            onClick={cancelEdit}
-            className="rounded border border-zinc-700 px-2 py-1 text-xs hover:bg-zinc-800"
-          >
-            Cancel
-          </button>
         </>
       ) : (
         <>
-          <Link
-            to={`/subjects/${subject.id}`}
-            className="flex-1 truncate text-blue-300 hover:text-blue-200 hover:underline"
-          >
-            {subject.name}
-          </Link>
-          <span className="text-xs text-zinc-500">
-            {subject.card_count} card{subject.card_count === 1 ? "" : "s"}
-          </span>
-          <Link
-            to={`/practice?subject=${subject.id}&auto=1`}
-            className="inline-flex items-center gap-1 rounded border border-blue-700/60 px-2 py-1 text-xs text-blue-200 hover:bg-blue-900/30"
-            title={
-              subject.card_count === 0
-                ? "No cards in this subject"
-                : `Practice ${subject.name}`
-            }
-            onClick={(e) => {
-              if (subject.card_count === 0) e.preventDefault();
-            }}
-            aria-disabled={subject.card_count === 0}
-          >
-            <PracticeIcon width={12} height={12} />
-            Practice
-          </Link>
-          <button
-            onClick={startEdit}
-            className="rounded border border-zinc-700 px-2 py-1 text-xs hover:bg-zinc-800"
-          >
-            Rename
-          </button>
-          <button
-            onClick={onDeleted}
-            className="rounded border border-red-900 px-2 py-1 text-xs text-red-300 hover:bg-red-900/40"
-          >
-            Delete
-          </button>
+          <div className="flex items-center gap-2">
+            <Link
+              to={`/subjects/${subject.id}`}
+              className="flex-1 truncate text-blue-300 hover:text-blue-200 hover:underline"
+            >
+              {subject.name}
+            </Link>
+            <span className="text-xs text-zinc-500">
+              {subject.card_count} card{subject.card_count === 1 ? "" : "s"}
+            </span>
+            <Link
+              to={`/practice?subject=${subject.id}&auto=1`}
+              className="inline-flex items-center gap-1 rounded border border-blue-700/60 px-2 py-1 text-xs text-blue-200 hover:bg-blue-900/30"
+              title={
+                subject.card_count === 0
+                  ? "No cards in this subject"
+                  : `Practice ${subject.name}`
+              }
+              onClick={(e) => {
+                if (subject.card_count === 0) e.preventDefault();
+              }}
+              aria-disabled={subject.card_count === 0}
+            >
+              <PracticeIcon width={12} height={12} />
+              Practice
+            </Link>
+            <button
+              onClick={startEdit}
+              className="rounded border border-zinc-700 px-2 py-1 text-xs hover:bg-zinc-800"
+            >
+              Edit
+            </button>
+            <button
+              onClick={onDeleted}
+              className="rounded border border-red-900 px-2 py-1 text-xs text-red-300 hover:bg-red-900/40"
+            >
+              Delete
+            </button>
+          </div>
+          {subject.description && (
+            <p className="text-xs text-zinc-400">{subject.description}</p>
+          )}
         </>
       )}
     </li>

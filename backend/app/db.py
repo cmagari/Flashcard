@@ -36,6 +36,21 @@ def init_db() -> None:
     from . import models  # noqa: F401  (register mappers)
 
     Base.metadata.create_all(bind=engine())
+    _apply_lightweight_migrations()
+
+
+def _apply_lightweight_migrations() -> None:
+    # SQLAlchemy create_all does not ALTER existing tables. Apply additive
+    # column migrations here for databases created before the column existed.
+    with engine().begin() as conn:
+        cols = {
+            row[1]
+            for row in conn.exec_driver_sql("PRAGMA table_info(subjects)").fetchall()
+        }
+        if "description" not in cols:
+            conn.exec_driver_sql(
+                "ALTER TABLE subjects ADD COLUMN description TEXT NOT NULL DEFAULT ''"
+            )
 
 
 def get_session() -> Iterator[Session]:
