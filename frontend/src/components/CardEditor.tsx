@@ -55,6 +55,22 @@ export default function CardEditor({ label, value, onChange }: Props) {
     "(": ["(", ")"],
   };
 
+  const oneArgCmds = new Set([
+    "\\sqrt", "\\vec", "\\hat", "\\bar", "\\tilde", "\\dot", "\\ddot",
+    "\\widehat", "\\widetilde", "\\overline", "\\underline",
+    "\\mathrm", "\\mathbf", "\\mathit", "\\mathbb", "\\mathcal",
+    "\\mathfrak", "\\mathsf", "\\mathtt", "\\boldsymbol",
+    "\\text", "\\textbf", "\\textit",
+    "\\sin", "\\cos", "\\tan", "\\cot", "\\sec", "\\csc",
+    "\\log", "\\ln", "\\exp",
+  ]);
+
+  const twoArgCmds = new Set([
+    "\\frac", "\\tfrac", "\\dfrac", "\\cfrac",
+    "\\binom", "\\dbinom", "\\tbinom",
+    "\\stackrel", "\\overset", "\\underset",
+  ]);
+
   function inMathContext(text: string, pos: number): boolean {
     let i = 0;
     let mode: "text" | "inline" | "block" = "text";
@@ -91,6 +107,35 @@ export default function CardEditor({ label, value, onChange }: Props) {
     }
     const ta = ref.current;
     if (!ta) return;
+
+    if (
+      /^[a-zA-Z]$/.test(e.key) &&
+      !e.ctrlKey &&
+      !e.metaKey &&
+      !e.altKey &&
+      ta.selectionStart === ta.selectionEnd
+    ) {
+      const start = ta.selectionStart;
+      if (inMathContext(value, start)) {
+        const match = (value.slice(0, start) + e.key).match(/\\[a-zA-Z]+$/);
+        if (match) {
+          const cmd = match[0];
+          const tail = twoArgCmds.has(cmd) ? "{}{}" : oneArgCmds.has(cmd) ? "{}" : null;
+          if (tail) {
+            e.preventDefault();
+            const next = value.slice(0, start) + e.key + tail + value.slice(start);
+            onChange(next);
+            requestAnimationFrame(() => {
+              ta.focus();
+              const cursor = start + e.key.length + 1;
+              ta.setSelectionRange(cursor, cursor);
+            });
+            return;
+          }
+        }
+      }
+    }
+
     const pair = pairs[e.key];
     if (!pair) return;
     if (ta.selectionStart !== ta.selectionEnd) {
