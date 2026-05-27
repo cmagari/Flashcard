@@ -29,6 +29,50 @@ export default function CardEditor({ label, value, onChange }: Props) {
     });
   }
 
+  function wrap(open: string, close: string) {
+    const ta = ref.current;
+    if (!ta) return;
+    const start = ta.selectionStart;
+    const end = ta.selectionEnd;
+    const sel = value.slice(start, end);
+    const next = value.slice(0, start) + open + sel + close + value.slice(end);
+    onChange(next);
+    requestAnimationFrame(() => {
+      ta.focus();
+      if (start === end) {
+        const cursor = start + open.length;
+        ta.setSelectionRange(cursor, cursor);
+      } else {
+        ta.setSelectionRange(start + open.length, end + open.length);
+      }
+    });
+  }
+
+  const pairs: Record<string, [string, string]> = {
+    $: ["$", "$"],
+    "{": ["{", "}"],
+    "[": ["[", "]"],
+    "(": ["(", ")"],
+  };
+
+  function onKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey) {
+      const k = e.key.toLowerCase();
+      if (k === "b") { e.preventDefault(); wrap("**", "**"); return; }
+      if (k === "i") { e.preventDefault(); wrap("*", "*"); return; }
+      if (k === "u") { e.preventDefault(); wrap("<u>", "</u>"); return; }
+    }
+    const ta = ref.current;
+    if (!ta) return;
+    if (ta.selectionStart !== ta.selectionEnd) {
+      const pair = pairs[e.key];
+      if (pair) {
+        e.preventDefault();
+        wrap(pair[0], pair[1]);
+      }
+    }
+  }
+
   async function uploadAndInsert(promise: Promise<{ filename: string }>) {
     try {
       const uploaded = await promise;
@@ -115,6 +159,7 @@ export default function CardEditor({ label, value, onChange }: Props) {
         ref={ref}
         value={value}
         onChange={(e) => onChange(e.target.value)}
+        onKeyDown={onKeyDown}
         onPaste={onPaste}
         onDrop={onDrop}
         onDragOver={(e) => e.preventDefault()}

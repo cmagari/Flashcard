@@ -2,6 +2,7 @@ import ReactMarkdown, { defaultUrlTransform } from "react-markdown";
 import remarkGfm from "remark-gfm";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
+import rehypeRaw from "rehype-raw";
 import { apiBaseUrl } from "../api";
 
 interface Props {
@@ -37,7 +38,7 @@ export default function MarkdownView({ source, className }: Props) {
     <div className={`markdown ${className ?? ""}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
-        rehypePlugins={[rehypeKatex]}
+        rehypePlugins={[rehypeRaw, rehypeKatex]}
         urlTransform={(url) =>
           url.startsWith("app-image://") ? url : defaultUrlTransform(url)
         }

@@ -61,6 +61,9 @@ export default function CardEditPage() {
           back_md: back,
           tag_names: tagNames,
         });
+        setFront("");
+        setBack("");
+        setError(null);
       } else {
         await api.updateCard(Number(id), {
           subject_id: subjectId,
@@ -68,9 +71,9 @@ export default function CardEditPage() {
           back_md: back,
           tag_names: tagNames,
         });
+        setError(null);
+        navigate(-1);
       }
-      setError(null);
-      navigate(-1);
     } catch (err) {
       setError((err as Error).message);
     } finally {
