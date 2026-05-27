@@ -109,6 +109,23 @@ export default function CardEditor({ label, value, onChange }: Props) {
     if (!ta) return;
 
     if (
+      (e.key === "}" || e.key === "]" || e.key === ")" || e.key === "$") &&
+      !e.ctrlKey &&
+      !e.metaKey &&
+      !e.altKey &&
+      ta.selectionStart === ta.selectionEnd &&
+      value[ta.selectionStart] === e.key
+    ) {
+      const pos = ta.selectionStart;
+      e.preventDefault();
+      requestAnimationFrame(() => {
+        ta.focus();
+        ta.setSelectionRange(pos + 1, pos + 1);
+      });
+      return;
+    }
+
+    if (
       /^[a-zA-Z]$/.test(e.key) &&
       !e.ctrlKey &&
       !e.metaKey &&
