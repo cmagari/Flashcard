@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api, Card, Subject, Tag } from "../api";
+import CardEditModal from "../components/CardEditModal";
 import MarkdownView from "../components/MarkdownView";
 
 type Mode = "random" | "inorder" | "smart";
@@ -32,6 +33,7 @@ export default function PracticePage() {
   const [done, setDone] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [editing, setEditing] = useState(false);
 
   // sessionCorrects is mirrored in a ref so fetchNext can read the latest
   // value synchronously after record() updates state — useState alone would
@@ -152,7 +154,7 @@ export default function PracticePage() {
   }
 
   useEffect(() => {
-    if (!started || !card) return;
+    if (!started || !card || editing) return;
     function onKey(e: KeyboardEvent) {
       if ((e.target as HTMLElement)?.tagName?.match(/INPUT|TEXTAREA|SELECT/)) return;
       if (e.key === " " || e.key === "Enter") {
@@ -169,7 +171,7 @@ export default function PracticePage() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [started, card?.id, mode, subjectId, tagIds]);
+  }, [started, card?.id, mode, subjectId, tagIds, editing]);
 
   function toggleTag(id: number) {
     setTagIds((prev) =>
@@ -281,6 +283,14 @@ export default function PracticePage() {
           </>
         )}
         <div className="flex-1" />
+        {card && (
+          <button
+            onClick={() => setEditing(true)}
+            className="rounded border border-zinc-700 px-3 py-1 text-xs hover:bg-zinc-800"
+          >
+            Edit card
+          </button>
+        )}
         <button
           onClick={quit}
           className="rounded border border-zinc-700 px-3 py-1 text-xs hover:bg-zinc-800"
@@ -347,6 +357,16 @@ export default function PracticePage() {
           </div>
         )}
       </div>
+      {editing && card && (
+        <CardEditModal
+          card={card}
+          onClose={() => setEditing(false)}
+          onSaved={(updated) => {
+            setCard(updated);
+            setEditing(false);
+          }}
+        />
+      )}
     </div>
   );
 }
