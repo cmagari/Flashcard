@@ -6,6 +6,7 @@
     "install:all": "npm --prefix frontend install && npm --prefix electron install && uv --directory backend sync",
     "dev:frontend": "npm --prefix frontend run dev",
     "dev:electron": "wait-on tcp:5183 && cross-env NODE_ENV=development npm --prefix electron run start",
+    "predev": "kill-port 5183",
     "dev": "concurrently --names \"frontend,electron\" --prefix-colors \"cyan,magenta\" --kill-others-on-fail \"npm:dev:frontend\" \"npm:dev:electron\"",
     "build:frontend": "npm --prefix frontend run build",
     "build:backend": "uv --directory backend run pyinstaller --noconfirm --clean --distpath dist --workpath build --name flashcard-backend --collect-data fastapi --collect-data uvicorn --collect-data starlette --collect-submodules uvicorn --collect-submodules pydantic --collect-data PIL --collect-data sqlalchemy launch.py",
@@ -17,6 +18,7 @@
   "devDependencies": {
     "concurrently": "^9.1.0",
     "cross-env": "^7.0.3",
+    "kill-port": "^2.0.1",
     "wait-on": "^8.0.1"
   }
 }

@@ -117,6 +117,13 @@ export default function CardEditPage() {
           </button>
         )}
         <button
+          onClick={() => navigate(-1)}
+          disabled={saving}
+          className="rounded border border-zinc-700 px-3 py-1.5 text-sm hover:bg-zinc-800 disabled:opacity-50"
+        >
+          Cancel
+        </button>
+        <button
           onClick={save}
           disabled={saving}
           className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium hover:bg-blue-500 disabled:opacity-50"
