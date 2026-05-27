@@ -1,7 +1,7 @@
 {
   "name": "flashcard",
   "private": true,
-  "version": "0.1.1",
+  "version": "0.2.0",
   "scripts": {
     "install:all": "npm --prefix frontend install && npm --prefix electron install && uv --directory backend sync",
     "dev:frontend": "npm --prefix frontend run dev",
