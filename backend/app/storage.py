@@ -24,3 +24,9 @@ def images_dir() -> Path:
 
 def db_path() -> Path:
     return app_data_dir() / "flashcards.db"
+
+
+def backups_dir() -> Path:
+    d = app_data_dir() / "backups"
+    d.mkdir(parents=True, exist_ok=True)
+    return d

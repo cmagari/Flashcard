@@ -8,8 +8,16 @@ declare global {
       chooseDataDir?: () => Promise<string | null>;
       setDataDir?: (dir: string) => Promise<string>;
       resetDataDir?: () => Promise<string>;
+      listBackups?: () => Promise<BackupInfo[]>;
+      restoreBackup?: (filename: string) => Promise<string>;
     };
   }
+}
+
+export interface BackupInfo {
+  filename: string;
+  size_bytes: number;
+  created_at: string;
 }
 
 export interface AppInfo {

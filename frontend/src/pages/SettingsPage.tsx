@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { api, AppInfo, setApiBaseUrl } from "../api";
+import { api, AppInfo, BackupInfo, setApiBaseUrl } from "../api";
 import { useAlert, useConfirm } from "../components/Dialog";
 
 export default function SettingsPage() {
@@ -9,11 +9,15 @@ export default function SettingsPage() {
   const [cleaning, setCleaning] = useState(false);
   const [override, setOverride] = useState<string | null>(null);
   const [changingDir, setChangingDir] = useState(false);
+  const [backups, setBackups] = useState<BackupInfo[] | null>(null);
+  const [restoring, setRestoring] = useState(false);
   const alert = useAlert();
   const confirm = useConfirm();
   const canOpen = typeof window !== "undefined" && !!window.flashcardApi?.openPath;
   const canChooseDir =
     typeof window !== "undefined" && !!window.flashcardApi?.chooseDataDir;
+  const canRestore =
+    typeof window !== "undefined" && !!window.flashcardApi?.restoreBackup;
 
   function refreshOrphans() {
     api
@@ -36,10 +40,22 @@ export default function SettingsPage() {
       .catch(() => setOverride(null));
   }
 
+  function refreshBackups() {
+    if (!window.flashcardApi?.listBackups) {
+      setBackups([]);
+      return;
+    }
+    window.flashcardApi
+      .listBackups()
+      .then((rows) => setBackups(rows))
+      .catch(() => setBackups([]));
+  }
+
   useEffect(() => {
     refreshInfo();
     refreshOrphans();
     refreshOverride();
+    refreshBackups();
   }, []);
 
   async function chooseFolder() {
@@ -111,6 +127,36 @@ export default function SettingsPage() {
       alert({ title: "Cleanup failed", message: (err as Error).message });
     } finally {
       setCleaning(false);
+    }
+  }
+
+  async function restoreFromBackup(b: BackupInfo) {
+    if (!window.flashcardApi?.restoreBackup) return;
+    const ok = await confirm({
+      title: "Restore this backup?",
+      message: `flashcards.db will be replaced with the contents of ${b.filename}. The current database is renamed to flashcards-replaced-<timestamp>.db so it isn't lost.`,
+      confirmLabel: "Restore",
+      destructive: true,
+    });
+    if (!ok) return;
+    setRestoring(true);
+    try {
+      const newBase = await window.flashcardApi.restoreBackup(b.filename);
+      setApiBaseUrl(newBase);
+      refreshInfo();
+      refreshOrphans();
+      refreshBackups();
+      alert({
+        title: "Restore complete",
+        message: "The backup has been restored and the backend is back online.",
+      });
+    } catch (err) {
+      alert({
+        title: "Restore failed",
+        message: (err as Error).message,
+      });
+    } finally {
+      setRestoring(false);
     }
   }
 
@@ -222,6 +268,62 @@ export default function SettingsPage() {
 
       <section className="space-y-3 rounded border border-zinc-800 p-4">
         <header className="flex items-baseline justify-between">
+          <h2 className="text-base font-medium text-zinc-100">Backups</h2>
+          <button
+            onClick={refreshBackups}
+            className="text-xs text-zinc-400 hover:text-zinc-200"
+          >
+            Refresh
+          </button>
+        </header>
+        <p className="text-sm text-zinc-400">
+          A snapshot of <code className="text-zinc-300">flashcards.db</code> is
+          taken automatically when the app closes. The 3 most recent are kept;
+          older ones are pruned. Restore replaces the live database with the
+          snapshot — the previous file is renamed (not deleted) so you can roll
+          back if needed.
+        </p>
+        {!canRestore && (
+          <p className="text-xs text-zinc-500">
+            Restore is only available when running inside the Electron app.
+          </p>
+        )}
+        {backups === null ? (
+          <p className="text-sm text-zinc-500">Loading…</p>
+        ) : backups.length === 0 ? (
+          <p className="text-sm text-zinc-500">
+            No backups yet — one will be saved next time you close the app.
+          </p>
+        ) : (
+          <ul className="divide-y divide-zinc-800 rounded border border-zinc-800">
+            {backups.map((b) => (
+              <li
+                key={b.filename}
+                className="flex flex-wrap items-center gap-3 px-3 py-2 text-sm"
+              >
+                <div className="flex flex-1 flex-col">
+                  <span className="text-zinc-200">
+                    {new Date(b.created_at).toLocaleString()}
+                  </span>
+                  <span className="text-xs text-zinc-500">
+                    {b.filename} · {formatBytes(b.size_bytes)}
+                  </span>
+                </div>
+                <button
+                  onClick={() => restoreFromBackup(b)}
+                  disabled={!canRestore || restoring}
+                  className="rounded border border-zinc-700 px-3 py-1 text-xs hover:bg-zinc-800 disabled:opacity-50"
+                >
+                  {restoring ? "Restoring…" : "Restore"}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
+      <section className="space-y-3 rounded border border-zinc-800 p-4">
+        <header className="flex items-baseline justify-between">
           <h2 className="text-base font-medium text-zinc-100">Storage</h2>
           <span className="text-xs text-zinc-500">
             All flashcards, attempts, and images live here.
@@ -258,6 +360,12 @@ export default function SettingsPage() {
       </section>
     </div>
   );
+}
+
+function formatBytes(n: number): string {
+  if (n < 1024) return `${n} B`;
+  if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+  return `${(n / 1024 / 1024).toFixed(1)} MB`;
 }
 
 interface PathRowProps {

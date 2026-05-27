@@ -10,4 +10,7 @@ contextBridge.exposeInMainWorld("flashcardApi", {
   chooseDataDir: () => ipcRenderer.invoke("flashcard:choose-data-dir"),
   setDataDir: (dir) => ipcRenderer.invoke("flashcard:set-data-dir", dir),
   resetDataDir: () => ipcRenderer.invoke("flashcard:reset-data-dir"),
+  listBackups: () => ipcRenderer.invoke("flashcard:list-backups"),
+  restoreBackup: (filename) =>
+    ipcRenderer.invoke("flashcard:restore-backup", filename),
 });

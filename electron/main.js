@@ -261,6 +261,69 @@ ipcMain.handle("flashcard:reset-data-dir", async () => {
   return `http://127.0.0.1:${backendPort}`;
 });
 
+function backendGetJson(p) {
+  return new Promise((resolve, reject) => {
+    if (!backendPort) return reject(new Error("Backend not running"));
+    const req = http.request(
+      { host: "127.0.0.1", port: backendPort, path: p, method: "GET", timeout: 3000 },
+      (res) => {
+        let body = "";
+        res.setEncoding("utf8");
+        res.on("data", (c) => (body += c));
+        res.on("end", () => {
+          if (res.statusCode === 200) {
+            try {
+              resolve(JSON.parse(body));
+            } catch (err) {
+              reject(err);
+            }
+          } else {
+            reject(new Error(`HTTP ${res.statusCode}: ${body}`));
+          }
+        });
+      },
+    );
+    req.on("error", reject);
+    req.on("timeout", () => {
+      req.destroy();
+      reject(new Error("Request timed out"));
+    });
+    req.end();
+  });
+}
+
+ipcMain.handle("flashcard:list-backups", () => backendGetJson("/api/backup"));
+
+ipcMain.handle("flashcard:restore-backup", async (_evt, filename) => {
+  if (typeof filename !== "string" || !filename) {
+    throw new Error("Invalid backup filename");
+  }
+  // Resolve current paths BEFORE stopping the backend.
+  const info = await backendGetJson("/api/info");
+  const backupsDir = path.resolve(path.join(info.data_dir, "backups"));
+  const backupPath = path.resolve(path.join(backupsDir, filename));
+  if (!backupPath.startsWith(backupsDir + path.sep)) {
+    throw new Error("Backup path is outside the backups folder");
+  }
+  if (!fs.existsSync(backupPath)) {
+    throw new Error("Backup file not found");
+  }
+
+  stopBackend();
+  await waitForBackendExit();
+
+  const dbPath = info.db_path;
+  if (fs.existsSync(dbPath)) {
+    const ts = new Date().toISOString().replace(/[:.]/g, "-");
+    const sidecar = path.join(info.data_dir, `flashcards-replaced-${ts}.db`);
+    fs.renameSync(dbPath, sidecar);
+  }
+  fs.copyFileSync(backupPath, dbPath);
+
+  await startBackend();
+  return `http://127.0.0.1:${backendPort}`;
+});
+
 app.whenReady().then(async () => {
   try {
     await startBackend();
@@ -275,12 +338,61 @@ app.whenReady().then(async () => {
   });
 });
 
+let backupAttempted = false;
+
+function runQuitBackup() {
+  return new Promise((resolve) => {
+    if (!backendPort) return resolve();
+    console.log("[backup] taking quit-time backup…");
+    const req = http.request(
+      {
+        host: "127.0.0.1",
+        port: backendPort,
+        path: "/api/backup",
+        method: "POST",
+        timeout: 5000,
+      },
+      (res) => {
+        res.resume();
+        res.on("end", () => {
+          if (res.statusCode && res.statusCode >= 200 && res.statusCode < 300) {
+            console.log("[backup] saved");
+          } else {
+            console.warn(`[backup] HTTP ${res.statusCode}`);
+          }
+          resolve();
+        });
+      },
+    );
+    req.on("error", (err) => {
+      console.warn("[backup] failed:", err.message);
+      resolve();
+    });
+    req.on("timeout", () => {
+      console.warn("[backup] timed out");
+      req.destroy();
+      resolve();
+    });
+    req.end();
+  });
+}
+
 app.on("window-all-closed", () => {
-  stopBackend();
   if (process.platform !== "darwin") app.quit();
 });
 
-app.on("before-quit", stopBackend);
+app.on("before-quit", async (e) => {
+  if (backupAttempted) return;
+  backupAttempted = true;
+  e.preventDefault();
+  try {
+    await runQuitBackup();
+  } finally {
+    stopBackend();
+    app.quit();
+  }
+});
+
 process.on("exit", stopBackend);
 process.on("SIGINT", () => {
   stopBackend();
