@@ -1,7 +1,7 @@
 {
   "name": "flashcard-electron",
   "private": true,
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Local-only desktop flashcard app with Markdown + LaTeX rendering and recency/performance-weighted practice mode.",
   "author": {
     "name": "Cameron Magari",

@@ -110,6 +110,31 @@ export default function SubjectDetailPage() {
     }
   }
 
+  async function bulkDuplicate() {
+    const n = selected.size;
+    if (n === 0) return;
+    setBusy(true);
+    try {
+      // Duplicate in the cards' original order so copies keep a stable order.
+      const toCopy = cards.filter((c) => selected.has(c.id));
+      for (const c of toCopy) {
+        await api.createCard({
+          subject_id: c.subject_id,
+          front_md: c.front_md,
+          back_md: c.back_md,
+          tag_names: c.tags,
+        });
+      }
+      setSelected(new Set());
+      refreshCards();
+      refreshSubjects();
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function bulkMove(targetSubjectId: number) {
     setBusy(true);
     try {
@@ -195,6 +220,13 @@ export default function SubjectDetailPage() {
             title={otherSubjects.length === 0 ? "No other subjects to move to" : undefined}
           >
             Move…
+          </button>
+          <button
+            onClick={bulkDuplicate}
+            disabled={busy}
+            className="rounded border border-zinc-700 px-3 py-1 text-sm hover:bg-zinc-800 disabled:opacity-50"
+          >
+            Duplicate
           </button>
           <button
             onClick={bulkDelete}
