@@ -216,6 +216,7 @@ export const api = {
   nextCard: (params: {
     mode: "random" | "inorder" | "smart";
     subject_id?: number;
+    subject_ids?: number[];
     tag_ids?: number[];
     cursor_id?: number;
     exclude_ids?: number[];
@@ -223,6 +224,9 @@ export const api = {
     const search = new URLSearchParams();
     search.set("mode", params.mode);
     if (params.subject_id != null) search.set("subject_id", String(params.subject_id));
+    if (params.subject_ids?.length) {
+      for (const s of params.subject_ids) search.append("subject_ids", String(s));
+    }
     if (params.cursor_id != null) search.set("cursor_id", String(params.cursor_id));
     if (params.tag_ids?.length) {
       for (const t of params.tag_ids) search.append("tag_ids", String(t));

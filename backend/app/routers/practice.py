@@ -20,7 +20,7 @@ LAST_N = 10
 
 def _filtered_cards_query(
     session: Session,
-    subject_id: int | None,
+    subject_ids: list[int],
     tag_ids: list[int],
 ):
     stmt = select(Card).options(
@@ -28,8 +28,8 @@ def _filtered_cards_query(
         selectinload(Card.tags),
         selectinload(Card.attempts),
     )
-    if subject_id is not None:
-        stmt = stmt.where(Card.subject_id == subject_id)
+    if subject_ids:
+        stmt = stmt.where(Card.subject_id.in_(subject_ids))
     if tag_ids:
         for tid in tag_ids:
             sub = select(card_tags.c.card_id).where(card_tags.c.tag_id == tid)
@@ -41,6 +41,7 @@ def _filtered_cards_query(
 def next_card(
     mode: str = "random",
     subject_id: int | None = None,
+    subject_ids: list[int] | None = Query(default=None),
     tag_ids: list[int] | None = Query(default=None),
     cursor_id: int | None = None,
     exclude_ids: list[int] | None = Query(default=None),
@@ -49,7 +50,13 @@ def next_card(
     if mode not in {"random", "inorder", "smart"}:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Invalid mode")
 
-    stmt = _filtered_cards_query(session, subject_id, tag_ids or [])
+    # subject_ids (multi-select) takes precedence; fall back to the legacy
+    # single subject_id so older callers keep working.
+    subjects = list(subject_ids or [])
+    if not subjects and subject_id is not None:
+        subjects = [subject_id]
+
+    stmt = _filtered_cards_query(session, subjects, tag_ids or [])
     if exclude_ids:
         stmt = stmt.where(Card.id.notin_(exclude_ids))
 

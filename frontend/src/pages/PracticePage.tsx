@@ -16,13 +16,18 @@ export default function PracticePage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [tags, setTags] = useState<Tag[]>([]);
 
-  const initialSubject = (() => {
-    const v = searchParams.get("subject");
-    if (!v) return "" as number | "";
-    const n = Number(v);
-    return Number.isFinite(n) ? n : "";
+  const initialSubjectIds = (() => {
+    // Multi-select uses ?subjects=1,2,3; the legacy ?subject=1 link (from the
+    // home page) is still honored as a single selection.
+    const multi = searchParams.get("subjects");
+    const raw = multi ?? searchParams.get("subject");
+    if (!raw) return [] as number[];
+    return raw
+      .split(",")
+      .map((s) => Number(s))
+      .filter((n) => Number.isFinite(n));
   })();
-  const [subjectId, setSubjectId] = useState<number | "">(initialSubject);
+  const [subjectIds, setSubjectIds] = useState<number[]>(initialSubjectIds);
   const [tagIds, setTagIds] = useState<number[]>([]);
   const [mode, setMode] = useState<Mode>("smart");
 
@@ -58,7 +63,7 @@ export default function PracticePage() {
             : undefined;
         const next = await api.nextCard({
           mode,
-          subject_id: subjectId === "" ? undefined : subjectId,
+          subject_ids: subjectIds.length ? subjectIds : undefined,
           tag_ids: tagIds.length ? tagIds : undefined,
           cursor_id: cursorId,
           exclude_ids: excludeIds,
@@ -78,7 +83,7 @@ export default function PracticePage() {
         setBusy(false);
       }
     },
-    [mode, subjectId, tagIds],
+    [mode, subjectIds, tagIds],
   );
 
   function resetSession() {
@@ -171,12 +176,31 @@ export default function PracticePage() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [started, card?.id, mode, subjectId, tagIds, editing]);
+  }, [started, card?.id, mode, subjectIds, tagIds, editing]);
 
   function toggleTag(id: number) {
     setTagIds((prev) =>
       prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id],
     );
+  }
+
+  function toggleSubject(id: number) {
+    setSubjectIds((prev) => {
+      const next = prev.includes(id)
+        ? prev.filter((x) => x !== id)
+        : [...prev, id];
+      setSearchParams(
+        (sp) => {
+          const params = new URLSearchParams(sp);
+          params.delete("subject");
+          if (next.length) params.set("subjects", next.join(","));
+          else params.delete("subjects");
+          return params;
+        },
+        { replace: true },
+      );
+      return next;
+    });
   }
 
   if (!started) {
@@ -186,33 +210,6 @@ export default function PracticePage() {
 
         <div className="space-y-3 rounded border border-zinc-800 p-4">
           <div className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 text-sm">
-              <span className="text-zinc-400">Subject</span>
-              <select
-                value={subjectId}
-                onChange={(e) => {
-                  const v = e.target.value === "" ? "" : Number(e.target.value);
-                  setSubjectId(v);
-                  setSearchParams(
-                    (prev) => {
-                      const next = new URLSearchParams(prev);
-                      if (v === "") next.delete("subject");
-                      else next.set("subject", String(v));
-                      return next;
-                    },
-                    { replace: true },
-                  );
-                }}
-                className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm"
-              >
-                <option value="">All</option>
-                {subjects.map((s) => (
-                  <option key={s.id} value={s.id}>
-                    {s.name}
-                  </option>
-                ))}
-              </select>
-            </label>
             <label className="flex items-center gap-2 text-sm">
               <span className="text-zinc-400">Mode</span>
               <select
@@ -225,6 +222,54 @@ export default function PracticePage() {
                 <option value="inorder">In order</option>
               </select>
             </label>
+          </div>
+
+          <div>
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-zinc-400">
+                Subjects{" "}
+                {subjectIds.length === 0
+                  ? "(all)"
+                  : `(${subjectIds.length} selected)`}
+              </p>
+              {subjectIds.length > 0 && (
+                <button
+                  onClick={() => {
+                    setSubjectIds([]);
+                    setSearchParams(
+                      (sp) => {
+                        const params = new URLSearchParams(sp);
+                        params.delete("subject");
+                        params.delete("subjects");
+                        return params;
+                      },
+                      { replace: true },
+                    );
+                  }}
+                  className="text-xs text-zinc-400 hover:text-zinc-200 hover:underline"
+                >
+                  Clear
+                </button>
+              )}
+            </div>
+            <div className="mt-1 flex flex-wrap gap-1">
+              {subjects.map((s) => {
+                const active = subjectIds.includes(s.id);
+                return (
+                  <button
+                    key={s.id}
+                    onClick={() => toggleSubject(s.id)}
+                    className={`rounded-full border px-2 py-0.5 text-xs ${
+                      active
+                        ? "border-blue-500 bg-blue-700/40 text-white"
+                        : "border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                    }`}
+                  >
+                    {s.name}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {tags.length > 0 && (
