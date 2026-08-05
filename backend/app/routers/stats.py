@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session, selectinload
 
 from ..db import get_session
@@ -32,9 +32,14 @@ def home(session: Session = Depends(get_session)) -> HomeStats:
         .scalars()
         .all()
     )
+    # Drafts are excluded from practice, so counting them here would report
+    # mastery for cards that can never come up — and park them permanently at
+    # the top of the review queue, since an unattempted card scores highest.
     cards = (
         session.execute(
-            select(Card).options(
+            select(Card)
+            .where(Card.is_draft.is_(False))
+            .options(
                 selectinload(Card.subject),
                 selectinload(Card.tags),
                 selectinload(Card.attempts),
@@ -49,7 +54,13 @@ def home(session: Session = Depends(get_session)) -> HomeStats:
         s.id: SubjectMastery(id=s.id, name=s.name, card_count=0)
         for s in subjects
     }
-    totals = HomeTotals(subjects=len(subjects), cards=len(cards))
+    draft_count = session.execute(
+        select(func.count(Card.id)).where(Card.is_draft.is_(True))
+    ).scalar_one()
+
+    totals = HomeTotals(
+        subjects=len(subjects), cards=len(cards), drafts=draft_count
+    )
     candidates: list[tuple[float, Card, MasteryLevel]] = []
 
     for c in cards:

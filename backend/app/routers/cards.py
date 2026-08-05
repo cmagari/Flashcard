@@ -27,6 +27,7 @@ def _summary(c: Card) -> CardSummary:
         front_md=c.front_md,
         back_md=c.back_md,
         tags=[t.name for t in c.tags],
+        is_draft=c.is_draft,
         updated_at=c.updated_at,
     )
 
@@ -43,6 +44,7 @@ def _full(c: Card) -> CardOut:
         front_md=c.front_md,
         back_md=c.back_md,
         tags=[t.name for t in c.tags],
+        is_draft=c.is_draft,
         created_at=c.created_at,
         updated_at=c.updated_at,
         last10_attempts=last10,
@@ -54,6 +56,10 @@ def list_cards(
     subject_id: int | None = None,
     tag_ids: list[int] | None = Query(default=None),
     q: str | None = None,
+    draft: bool | None = Query(
+        default=None,
+        description="true = drafts only, false = finished only, omitted = both",
+    ),
     session: Session = Depends(get_session),
 ) -> list[CardSummary]:
     stmt = (
@@ -63,6 +69,8 @@ def list_cards(
     )
     if subject_id is not None:
         stmt = stmt.where(Card.subject_id == subject_id)
+    if draft is not None:
+        stmt = stmt.where(Card.is_draft.is_(draft))
     if tag_ids:
         # cards that have ALL requested tags
         for tid in tag_ids:
@@ -109,6 +117,7 @@ def create_card(payload: CardCreate, session: Session = Depends(get_session)) ->
         subject_id=payload.subject_id,
         front_md=payload.front_md,
         back_md=payload.back_md,
+        is_draft=payload.is_draft,
     )
     session.add(card)
     session.flush()
@@ -151,6 +160,8 @@ def update_card(
         card.back_md = payload.back_md
     if payload.tag_names is not None:
         _apply_tags(session, card, payload.tag_names)
+    if payload.is_draft is not None:
+        card.is_draft = payload.is_draft
     session.commit()
     session.refresh(card)
     return _full(card)

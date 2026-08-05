@@ -39,18 +39,23 @@ def init_db() -> None:
     _apply_lightweight_migrations()
 
 
+# (table, column, DDL) triples applied to databases created before the column
+# existed. Additive only — SQLAlchemy's create_all does not ALTER tables.
+_ADDED_COLUMNS = [
+    ("subjects", "description", "ALTER TABLE subjects ADD COLUMN description TEXT NOT NULL DEFAULT ''"),
+    ("cards", "is_draft", "ALTER TABLE cards ADD COLUMN is_draft BOOLEAN NOT NULL DEFAULT 0"),
+]
+
+
 def _apply_lightweight_migrations() -> None:
-    # SQLAlchemy create_all does not ALTER existing tables. Apply additive
-    # column migrations here for databases created before the column existed.
     with engine().begin() as conn:
-        cols = {
-            row[1]
-            for row in conn.exec_driver_sql("PRAGMA table_info(subjects)").fetchall()
-        }
-        if "description" not in cols:
-            conn.exec_driver_sql(
-                "ALTER TABLE subjects ADD COLUMN description TEXT NOT NULL DEFAULT ''"
-            )
+        for table, column, ddl in _ADDED_COLUMNS:
+            cols = {
+                row[1]
+                for row in conn.exec_driver_sql(f"PRAGMA table_info({table})").fetchall()
+            }
+            if column not in cols:
+                conn.exec_driver_sql(ddl)
 
 
 def get_session() -> Iterator[Session]:

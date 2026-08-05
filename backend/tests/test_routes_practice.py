@@ -8,10 +8,16 @@ def subject_id(client) -> int:
     return client.post("/api/subjects", json={"name": "Phys"}).json()["id"]
 
 
-def _make_card(client, subject_id, front="Q") -> int:
+def _make_card(client, subject_id, front="Q", is_draft=False) -> int:
     return client.post(
         "/api/cards",
-        json={"subject_id": subject_id, "front_md": front, "back_md": "A", "tag_names": []},
+        json={
+            "subject_id": subject_id,
+            "front_md": front,
+            "back_md": "A",
+            "tag_names": [],
+            "is_draft": is_draft,
+        },
     ).json()["id"]
 
 
@@ -66,6 +72,23 @@ def test_smart_excludes_ids(client, subject_id):
         ).json()
         assert body is not None
         assert body["id"] not in excluded
+
+
+@pytest.mark.parametrize("mode", ["random", "inorder", "smart"])
+def test_drafts_never_served_for_practice(client, subject_id, mode):
+    ready = _make_card(client, subject_id, "ready")
+    _make_card(client, subject_id, "wip", is_draft=True)
+
+    for _ in range(15):
+        body = client.get(f"/api/practice/next?mode={mode}&subject_id={subject_id}").json()
+        assert body is not None
+        assert body["id"] == ready
+
+
+@pytest.mark.parametrize("mode", ["random", "inorder", "smart"])
+def test_pool_of_only_drafts_is_empty(client, subject_id, mode):
+    _make_card(client, subject_id, "wip", is_draft=True)
+    assert client.get(f"/api/practice/next?mode={mode}&subject_id={subject_id}").json() is None
 
 
 def test_smart_returns_null_when_all_excluded(client, subject_id):

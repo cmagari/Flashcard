@@ -14,6 +14,7 @@ def _create(client, subject_id, **overrides) -> dict:
         "front_md": overrides.get("front_md", "Q"),
         "back_md": overrides.get("back_md", "A"),
         "tag_names": overrides.get("tag_names", []),
+        "is_draft": overrides.get("is_draft", False),
     }
     r = client.post("/api/cards", json=payload)
     assert r.status_code == 201, r.text
@@ -67,6 +68,41 @@ def test_delete_card(client, subject_id):
     card = _create(client, subject_id)
     assert client.delete(f"/api/cards/{card['id']}").status_code == 204
     assert client.get(f"/api/cards/{card['id']}").status_code == 404
+
+
+def test_cards_default_to_not_draft(client, subject_id):
+    assert _create(client, subject_id)["is_draft"] is False
+
+
+def test_list_cards_filters_by_draft(client, subject_id):
+    _create(client, subject_id, front_md="finished")
+    _create(client, subject_id, front_md="wip", is_draft=True)
+
+    both = client.get("/api/cards").json()
+    assert len(both) == 2
+
+    drafts = client.get("/api/cards?draft=true").json()
+    assert [c["front_md"] for c in drafts] == ["wip"]
+
+    finished = client.get("/api/cards?draft=false").json()
+    assert [c["front_md"] for c in finished] == ["finished"]
+
+
+def test_draft_flag_round_trips_through_patch(client, subject_id):
+    card = _create(client, subject_id)
+    marked = client.patch(f"/api/cards/{card['id']}", json={"is_draft": True}).json()
+    assert marked["is_draft"] is True
+    assert client.get(f"/api/cards/{card['id']}").json()["is_draft"] is True
+
+    unmarked = client.patch(f"/api/cards/{card['id']}", json={"is_draft": False}).json()
+    assert unmarked["is_draft"] is False
+
+
+def test_patch_without_is_draft_leaves_it_alone(client, subject_id):
+    card = _create(client, subject_id, is_draft=True)
+    patched = client.patch(f"/api/cards/{card['id']}", json={"front_md": "edited"}).json()
+    assert patched["front_md"] == "edited"
+    assert patched["is_draft"] is True
 
 
 def test_tags_endpoint_lists_with_usage(client, subject_id):

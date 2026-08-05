@@ -81,6 +81,8 @@ export interface CardSummary {
   front_md: string;
   back_md: string;
   tags: string[];
+  /** Unfinished. Stays in the library but is held back from practice. */
+  is_draft: boolean;
   updated_at: string;
 }
 
@@ -107,6 +109,8 @@ export interface MasteryCounts {
 export interface HomeTotals extends MasteryCounts {
   subjects: number;
   cards: number;
+  /** Draft cards — excluded from `cards` and from the mastery buckets. */
+  drafts: number;
 }
 
 export interface SubjectMastery extends MasteryCounts {
@@ -157,13 +161,22 @@ export const api = {
   listTags: () => request<Tag[]>("/api/tags"),
 
   // cards
-  listCards: (params: { subject_id?: number; tag_ids?: number[]; q?: string } = {}) => {
+  listCards: (
+    params: {
+      subject_id?: number;
+      tag_ids?: number[];
+      q?: string;
+      /** true = drafts only, false = finished only, omitted = both. */
+      draft?: boolean;
+    } = {},
+  ) => {
     const search = new URLSearchParams();
     if (params.subject_id != null) search.set("subject_id", String(params.subject_id));
     if (params.tag_ids?.length) {
       for (const t of params.tag_ids) search.append("tag_ids", String(t));
     }
     if (params.q) search.set("q", params.q);
+    if (params.draft != null) search.set("draft", String(params.draft));
     const qs = search.toString();
     return request<CardSummary[]>(`/api/cards${qs ? "?" + qs : ""}`);
   },
@@ -173,6 +186,7 @@ export const api = {
     front_md: string;
     back_md: string;
     tag_names: string[];
+    is_draft?: boolean;
   }) =>
     request<Card>("/api/cards", { method: "POST", body: JSON.stringify(data) }),
   updateCard: (
@@ -182,6 +196,7 @@ export const api = {
       front_md: string;
       back_md: string;
       tag_names: string[];
+      is_draft: boolean;
     }>,
   ) =>
     request<Card>(`/api/cards/${id}`, {

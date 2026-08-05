@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { api, Subject } from "../api";
 import CardEditor from "../components/CardEditor";
+import DraftToggle from "../components/DraftToggle";
 import MarkdownView from "../components/MarkdownView";
 import TagPicker from "../components/TagPicker";
 import { useConfirm } from "../components/Dialog";
@@ -19,6 +20,7 @@ export default function CardEditPage() {
   const [front, setFront] = useState("");
   const [back, setBack] = useState("");
   const [tagNames, setTagNames] = useState<string[]>([]);
+  const [isDraft, setIsDraft] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -43,6 +45,7 @@ export default function CardEditPage() {
         setFront(c.front_md);
         setBack(c.back_md);
         setTagNames(c.tags);
+        setIsDraft(c.is_draft);
       })
       .catch((err) => setError((err as Error).message));
   }, [id]);
@@ -60,6 +63,7 @@ export default function CardEditPage() {
           front_md: front,
           back_md: back,
           tag_names: tagNames,
+          is_draft: isDraft,
         });
         setFront("");
         setBack("");
@@ -70,6 +74,7 @@ export default function CardEditPage() {
           front_md: front,
           back_md: back,
           tag_names: tagNames,
+          is_draft: isDraft,
         });
         setError(null);
         navigate(-1);
@@ -153,6 +158,7 @@ export default function CardEditPage() {
         <div className="flex-1 min-w-[16rem]">
           <TagPicker selected={tagNames} onChange={setTagNames} />
         </div>
+        <DraftToggle value={isDraft} onChange={setIsDraft} />
       </div>
 
       {error && <p className="text-sm text-red-400">{error}</p>}

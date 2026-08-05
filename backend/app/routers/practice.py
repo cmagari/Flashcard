@@ -28,6 +28,8 @@ def _filtered_cards_query(
         selectinload(Card.tags),
         selectinload(Card.attempts),
     )
+    # Drafts are unfinished — never serve them for practice.
+    stmt = stmt.where(Card.is_draft.is_(False))
     if subject_ids:
         stmt = stmt.where(Card.subject_id.in_(subject_ids))
     if tag_ids:

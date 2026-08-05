@@ -4,6 +4,7 @@ import enum
 from datetime import datetime, timezone
 
 from sqlalchemy import (
+    Boolean,
     Column,
     DateTime,
     Enum,
@@ -14,6 +15,7 @@ from sqlalchemy import (
     Table,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -54,6 +56,11 @@ class Card(Base):
     )
     front_md: Mapped[str] = mapped_column(Text, nullable=False, default="")
     back_md: Mapped[str] = mapped_column(Text, nullable=False, default="")
+    # Unfinished cards. They stay in the library and are editable, but are held
+    # back from practice and from the mastery stats that describe practice.
+    is_draft: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("0")
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime, default=_utcnow, nullable=False)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=_utcnow, onupdate=_utcnow, nullable=False

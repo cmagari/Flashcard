@@ -8,10 +8,16 @@ def subject_id(client) -> int:
     return client.post("/api/subjects", json={"name": "Phys"}).json()["id"]
 
 
-def _make_card(client, subject_id, front="Q") -> int:
+def _make_card(client, subject_id, front="Q", is_draft=False) -> int:
     return client.post(
         "/api/cards",
-        json={"subject_id": subject_id, "front_md": front, "back_md": "A", "tag_names": []},
+        json={
+            "subject_id": subject_id,
+            "front_md": front,
+            "back_md": "A",
+            "tag_names": [],
+            "is_draft": is_draft,
+        },
     ).json()["id"]
 
 
@@ -29,6 +35,7 @@ def test_home_stats_empty(client):
     body = r.json()
     assert body["totals"]["subjects"] == 0
     assert body["totals"]["cards"] == 0
+    assert body["totals"]["drafts"] == 0
     assert body["totals"]["memorized"] == 0
     assert body["totals"]["familiar"] == 0
     assert body["totals"]["learning"] == 0
@@ -85,6 +92,18 @@ def test_needs_review_sorted_desc_and_capped(client, subject_id):
 
     weights = [c["weight"] for c in review]
     assert weights == sorted(weights, reverse=True)
+
+
+def test_drafts_excluded_from_totals_and_review_queue(client, subject_id):
+    _make_card(client, subject_id, "ready")
+    draft = _make_card(client, subject_id, "wip", is_draft=True)
+
+    body = client.get("/api/stats/home").json()
+    assert body["totals"]["cards"] == 1
+    assert body["totals"]["drafts"] == 1
+    assert body["totals"]["new"] == 1
+    assert [s["card_count"] for s in body["subjects"]] == [1]
+    assert draft not in [c["id"] for c in body["needs_review"]]
 
 
 def test_needs_review_prioritizes_unseen_over_recent_correct(client, subject_id):

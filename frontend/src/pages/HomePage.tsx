@@ -75,7 +75,12 @@ export default function HomePage() {
         </Link>
       </header>
 
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-4">
+      <section
+        className={
+          "grid grid-cols-2 gap-3 " +
+          (totals.drafts > 0 ? "md:grid-cols-5" : "md:grid-cols-4")
+        }
+      >
         <Tile label="Subjects" value={totals.subjects} />
         <Tile label="Cards" value={totals.cards} />
         <Tile
@@ -90,6 +95,19 @@ export default function HomePage() {
           hint={totals.cards ? `${pct(totals.new, totals.cards)}%` : undefined}
           accent="text-zinc-300"
         />
+        {/* Only worth a tile when there is something to finish. */}
+        {totals.drafts > 0 && (
+          <Tile
+            label="Drafts"
+            value={totals.drafts}
+            hint="Finish →"
+            accent="text-amber-300"
+            to="/cards?draft=drafts"
+            title={`${totals.drafts} draft card${
+              totals.drafts === 1 ? "" : "s"
+            } — not counted above and never served in practice. Click to edit them.`}
+          />
+        )}
       </section>
 
       <Legend />
@@ -138,17 +156,37 @@ interface TileProps {
   value: number;
   hint?: string;
   accent?: string;
+  /** When set, the tile becomes a link to this route. */
+  to?: string;
+  title?: string;
 }
 
-function Tile({ label, value, hint, accent = "text-zinc-100" }: TileProps) {
-  return (
-    <div className="rounded border border-zinc-800 bg-zinc-900 p-4">
+function Tile({ label, value, hint, accent = "text-zinc-100", to, title }: TileProps) {
+  const body = (
+    <>
       <div className={`text-3xl font-semibold tabular-nums ${accent}`}>{value}</div>
       <div className="mt-1 flex items-baseline justify-between text-xs text-zinc-400">
         <span>{label}</span>
         {hint && <span className="text-zinc-500">{hint}</span>}
       </div>
-    </div>
+    </>
+  );
+  const shell = "rounded border border-zinc-800 bg-zinc-900 p-4";
+  if (!to) {
+    return (
+      <div className={shell} title={title}>
+        {body}
+      </div>
+    );
+  }
+  return (
+    <Link
+      to={to}
+      title={title}
+      className={`${shell} block border-amber-900/70 hover:border-amber-700 hover:bg-zinc-800`}
+    >
+      {body}
+    </Link>
   );
 }
 

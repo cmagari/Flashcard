@@ -49,6 +49,7 @@ class CardBase(BaseModel):
     subject_id: int
     front_md: str = ""
     back_md: str = ""
+    is_draft: bool = False
 
 
 class CardCreate(CardBase):
@@ -60,6 +61,7 @@ class CardUpdate(BaseModel):
     front_md: str | None = None
     back_md: str | None = None
     tag_names: list[str] | None = None
+    is_draft: bool | None = None
 
 
 class CardSummary(BaseModel):
@@ -70,6 +72,7 @@ class CardSummary(BaseModel):
     front_md: str
     back_md: str
     tags: list[str]
+    is_draft: bool
     updated_at: datetime
 
 
@@ -81,6 +84,7 @@ class CardOut(BaseModel):
     front_md: str
     back_md: str
     tags: list[str]
+    is_draft: bool
     created_at: datetime
     updated_at: datetime
     last10_attempts: list[AttemptOut]
@@ -117,6 +121,9 @@ class MasteryCounts(BaseModel):
 class HomeTotals(MasteryCounts):
     subjects: int = 0
     cards: int = 0
+    # Counted separately: drafts are excluded from `cards` and the mastery
+    # buckets, but Home still surfaces how many are waiting to be finished.
+    drafts: int = 0
 
 
 class SubjectMastery(MasteryCounts):

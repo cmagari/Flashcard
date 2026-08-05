@@ -1,7 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { api, CardSummary, Subject, Tag } from "../api";
 import CardPreview from "../components/CardPreview";
+import { DraftBadge } from "../components/DraftToggle";
+
+type DraftFilter = "all" | "drafts" | "finished";
+
+const DRAFT_FILTERS: { value: DraftFilter; label: string }[] = [
+  { value: "all", label: "All cards" },
+  { value: "drafts", label: "Drafts only" },
+  { value: "finished", label: "Finished only" },
+];
 
 export default function CardsPage() {
   const navigate = useNavigate();
@@ -12,6 +21,20 @@ export default function CardsPage() {
   const [subjectId, setSubjectId] = useState<number | "">("");
   const [tagIds, setTagIds] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  // The draft filter lives in the URL so Home can deep-link straight to it
+  // (/cards?draft=drafts).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const draftParam = searchParams.get("draft");
+  const draftFilter: DraftFilter =
+    draftParam === "drafts" || draftParam === "finished" ? draftParam : "all";
+
+  function setDraftFilter(next: DraftFilter) {
+    const params = new URLSearchParams(searchParams);
+    if (next === "all") params.delete("draft");
+    else params.set("draft", next);
+    setSearchParams(params, { replace: true });
+  }
 
   useEffect(() => {
     api.listSubjects().then(setSubjects).catch(() => {});
@@ -25,6 +48,7 @@ export default function CardsPage() {
           q: q || undefined,
           subject_id: subjectId === "" ? undefined : subjectId,
           tag_ids: tagIds.length ? tagIds : undefined,
+          draft: draftFilter === "all" ? undefined : draftFilter === "drafts",
         })
         .then((rows) => {
           setCards(rows);
@@ -33,7 +57,7 @@ export default function CardsPage() {
         .catch((err) => setError((err as Error).message));
     }, 150);
     return () => clearTimeout(t);
-  }, [q, subjectId, tagIds]);
+  }, [q, subjectId, tagIds, draftFilter]);
 
   function toggleTag(id: number) {
     setTagIds((prev) =>
@@ -61,7 +85,7 @@ export default function CardsPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-2 md:grid-cols-4">
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
@@ -77,6 +101,23 @@ export default function CardsPage() {
           {subjects.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
+            </option>
+          ))}
+        </select>
+        <select
+          value={draftFilter}
+          onChange={(e) => setDraftFilter(e.target.value as DraftFilter)}
+          className={
+            "rounded border bg-zinc-900 px-3 py-1.5 text-sm " +
+            (draftFilter === "all"
+              ? "border-zinc-700"
+              : "border-amber-700 text-amber-200")
+          }
+          title="Drafts are held back from practice"
+        >
+          {DRAFT_FILTERS.map((f) => (
+            <option key={f.value} value={f.value}>
+              {f.label}
             </option>
           ))}
         </select>
@@ -135,6 +176,7 @@ export default function CardsPage() {
               <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-zinc-300">
                 {c.subject_name}
               </span>
+              {c.is_draft && <DraftBadge />}
               {c.tags.map((t) => (
                 <span
                   key={t}

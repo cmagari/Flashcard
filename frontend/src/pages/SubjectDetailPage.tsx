@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { api, CardSummary, Subject } from "../api";
 import { useConfirm } from "../components/Dialog";
 import CardPreview from "../components/CardPreview";
+import { DraftBadge } from "../components/DraftToggle";
 
 export default function SubjectDetailPage() {
   const { id } = useParams();
@@ -123,6 +124,7 @@ export default function SubjectDetailPage() {
           front_md: c.front_md,
           back_md: c.back_md,
           tag_names: c.tags,
+          is_draft: c.is_draft,
         });
       }
       setSelected(new Set());
@@ -295,12 +297,13 @@ export default function SubjectDetailPage() {
                   }}
                   className="flex flex-1 cursor-pointer flex-col gap-1.5 text-left focus:outline-none"
                 >
-                  {c.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
+                  {(c.is_draft || c.tags.length > 0) && (
+                    <div className="flex flex-wrap items-center gap-1 text-xs">
+                      {c.is_draft && <DraftBadge />}
                       {c.tags.map((t) => (
                         <span
                           key={t}
-                          className="rounded-full bg-blue-900/40 px-2 py-0.5 text-xs text-blue-200"
+                          className="rounded-full bg-blue-900/40 px-2 py-0.5 text-blue-200"
                         >
                           {t}
                         </span>

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { api, Card, Subject } from "../api";
 import CardEditor from "./CardEditor";
+import DraftToggle from "./DraftToggle";
 import MarkdownView from "./MarkdownView";
 import TagPicker from "./TagPicker";
 
@@ -16,6 +17,7 @@ export default function CardEditModal({ card, onClose, onSaved }: Props) {
   const [front, setFront] = useState(card.front_md);
   const [back, setBack] = useState(card.back_md);
   const [tagNames, setTagNames] = useState<string[]>(card.tags);
+  const [isDraft, setIsDraft] = useState(card.is_draft);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -42,6 +44,7 @@ export default function CardEditModal({ card, onClose, onSaved }: Props) {
         front_md: front,
         back_md: back,
         tag_names: tagNames,
+        is_draft: isDraft,
       });
       onSaved(updated);
     } catch (err) {
@@ -100,6 +103,7 @@ export default function CardEditModal({ card, onClose, onSaved }: Props) {
           <div className="flex-1 min-w-[16rem]">
             <TagPicker selected={tagNames} onChange={setTagNames} />
           </div>
+          <DraftToggle value={isDraft} onChange={setIsDraft} />
         </div>
 
         {error && <p className="text-sm text-red-400">{error}</p>}
