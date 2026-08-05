@@ -32,6 +32,10 @@
     ],
     "extraResources": [
       {
+        "from": "dictionaries",
+        "to": "dictionaries"
+      },
+      {
         "from": "../frontend/dist",
         "to": "frontend"
       },

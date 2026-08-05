@@ -1,4 +1,12 @@
-const { app, BrowserWindow, Menu, dialog, shell, ipcMain } = require("electron");
+const {
+  app,
+  BrowserWindow,
+  Menu,
+  MenuItem,
+  dialog,
+  shell,
+  ipcMain,
+} = require("electron");
 const { spawn } = require("node:child_process");
 const fs = require("node:fs");
 const net = require("node:net");
@@ -196,6 +204,120 @@ async function restartBackend() {
   await startBackend();
 }
 
+// Chromium is supposed to fetch a Hunspell dictionary from Google's CDN the
+// first time spellcheck is needed. On some machines that download never even
+// gets attempted — <userData>/Dictionaries stays empty forever, so no word is
+// ever flagged and the context menu has no corrections to offer. It does load
+// a dictionary that is already sitting in that folder, so we ship one and copy
+// it into place at startup. The name must match what Chromium looks for:
+// <lang>-<feature version>.bdic. If an Electron upgrade bumps that version,
+// refresh the bundled file from https://redirector.gvt1.com/edgedl/chrome/dict/.
+const SPELLCHECK_LANGUAGE = "en-US";
+const BUNDLED_DICTIONARY = "en-us-10-1.bdic";
+const INSTALLED_DICTIONARY = "en-US-10-1.bdic";
+
+function bundledDictionaryDir() {
+  return isDev
+    ? path.join(__dirname, "dictionaries")
+    : path.join(process.resourcesPath, "dictionaries");
+}
+
+function setUpSpellChecker(ses) {
+  try {
+    const src = path.join(bundledDictionaryDir(), BUNDLED_DICTIONARY);
+    const destDir = path.join(app.getPath("userData"), "Dictionaries");
+    const dest = path.join(destDir, INSTALLED_DICTIONARY);
+    if (!fs.existsSync(dest)) {
+      if (!fs.existsSync(src)) {
+        console.warn(`[spellcheck] bundled dictionary missing: ${src}`);
+      } else {
+        fs.mkdirSync(destDir, { recursive: true });
+        fs.copyFileSync(src, dest);
+        console.log(`[spellcheck] installed dictionary -> ${dest}`);
+      }
+    }
+
+    ses.setSpellCheckerEnabled(true);
+    ses.setSpellCheckerLanguages([SPELLCHECK_LANGUAGE]);
+    console.log(
+      `[spellcheck] enabled=${ses.isSpellCheckerEnabled()} languages=${ses
+        .getSpellCheckerLanguages()
+        .join(", ")} dictionary=${fs.existsSync(dest) ? "present" : "MISSING"}`,
+    );
+  } catch (err) {
+    console.warn("[spellcheck] setup failed", err);
+  }
+}
+
+// There is no application menu (see Menu.setApplicationMenu(null)), so the
+// context menu is the only place spelling suggestions and the clipboard verbs
+// can surface. Chromium underlines misspellings on its own once spellcheck is
+// enabled; the suggestions arrive on the context-menu event params.
+function attachContextMenu(win) {
+  win.webContents.on("context-menu", (_event, params) => {
+    const menu = new Menu();
+    const { misspelledWord, dictionarySuggestions, editFlags } = params;
+
+    if (misspelledWord) {
+      if (dictionarySuggestions.length === 0) {
+        menu.append(
+          new MenuItem({ label: "No spelling suggestions", enabled: false }),
+        );
+      } else {
+        for (const suggestion of dictionarySuggestions.slice(0, 6)) {
+          menu.append(
+            new MenuItem({
+              label: suggestion,
+              click: () => win.webContents.replaceMisspelling(suggestion),
+            }),
+          );
+        }
+      }
+      menu.append(new MenuItem({ type: "separator" }));
+      menu.append(
+        new MenuItem({
+          label: "Add to dictionary",
+          click: () =>
+            win.webContents.session.addWordToSpellCheckerDictionary(
+              misspelledWord,
+            ),
+        }),
+      );
+      menu.append(new MenuItem({ type: "separator" }));
+    }
+
+    if (params.isEditable || params.selectionText) {
+      menu.append(
+        new MenuItem({ role: "cut", enabled: editFlags.canCut }),
+      );
+      menu.append(
+        new MenuItem({ role: "copy", enabled: editFlags.canCopy }),
+      );
+      menu.append(
+        new MenuItem({ role: "paste", enabled: editFlags.canPaste }),
+      );
+      if (params.isEditable) {
+        menu.append(new MenuItem({ type: "separator" }));
+        menu.append(
+          new MenuItem({ role: "selectAll", enabled: editFlags.canSelectAll }),
+        );
+      }
+    }
+
+    if (isDev) {
+      if (menu.items.length > 0) menu.append(new MenuItem({ type: "separator" }));
+      menu.append(
+        new MenuItem({
+          label: "Inspect element",
+          click: () => win.webContents.inspectElement(params.x, params.y),
+        }),
+      );
+    }
+
+    if (menu.items.length > 0) menu.popup({ window: win });
+  });
+}
+
 async function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1200,
@@ -208,8 +330,12 @@ async function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
       devTools: isDev,
+      spellcheck: true,
     },
   });
+
+  setUpSpellChecker(mainWindow.webContents.session);
+  attachContextMenu(mainWindow);
 
   if (isDev) {
     await mainWindow.loadURL("http://localhost:5183");
