@@ -71,6 +71,54 @@ export default function CardEditor({ label, value, onChange }: Props) {
     "\\stackrel", "\\overset", "\\underset",
   ]);
 
+  // A markdown list marker only counts when it opens the line: optional
+  // indent, then `-`/`*`/`+` or `1.`/`1)`, then whitespace. Anchoring to the
+  // line start is what keeps "I paid 5 - 3 dollars" or "version 1.5" from
+  // being read as list items. An optional `[ ]` / `[x]` makes it a task item.
+  const LIST_RE = /^([ \t]*)(?:([-*+])|(\d+)([.)]))([ \t]+)(\[[ xX]\][ \t]+)?(.*)$/;
+
+  function lineBoundsAt(text: string, pos: number): [number, number] {
+    const start = text.lastIndexOf("\n", pos - 1) + 1;
+    const nl = text.indexOf("\n", pos);
+    return [start, nl === -1 ? text.length : nl];
+  }
+
+  function replaceRange(from: number, to: number, text: string, cursor: number) {
+    const ta = ref.current;
+    onChange(value.slice(0, from) + text + value.slice(to));
+    requestAnimationFrame(() => {
+      if (!ta) return;
+      ta.focus();
+      ta.setSelectionRange(cursor, cursor);
+    });
+  }
+
+  // Enter inside a list item continues the list. On an item with no content
+  // it strips the marker instead, which is how you get back out of a list.
+  // Returns false when the line isn't a list item so the keypress falls
+  // through to the browser's normal newline.
+  function continueList(pos: number): boolean {
+    const [lineStart, lineEnd] = lineBoundsAt(value, pos);
+    const line = value.slice(lineStart, lineEnd);
+    const m = line.match(LIST_RE);
+    if (!m) return false;
+
+    const [, indent, bullet, num, delim, gap, task, content] = m;
+    const markerEnd = lineStart + (line.length - content.length);
+    // Cursor still inside the marker itself — let Enter behave normally.
+    if (pos < markerEnd) return false;
+
+    if (content.trim() === "") {
+      replaceRange(lineStart, pos, "", lineStart);
+      return true;
+    }
+
+    const marker = bullet ? bullet : `${Number(num) + 1}${delim}`;
+    const prefix = `\n${indent}${marker}${gap}${task ? "[ ] " : ""}`;
+    replaceRange(pos, pos, prefix, pos + prefix.length);
+    return true;
+  }
+
   function inMathContext(text: string, pos: number): boolean {
     let i = 0;
     let mode: "text" | "inline" | "block" = "text";
@@ -107,6 +155,22 @@ export default function CardEditor({ label, value, onChange }: Props) {
     }
     const ta = ref.current;
     if (!ta) return;
+
+    if (
+      e.key === "Enter" &&
+      !e.shiftKey &&
+      !e.ctrlKey &&
+      !e.metaKey &&
+      !e.altKey &&
+      ta.selectionStart === ta.selectionEnd &&
+      // A `-` opening a line inside $$...$$ is a minus sign, not a bullet.
+      !inMathContext(value, ta.selectionStart)
+    ) {
+      if (continueList(ta.selectionStart)) {
+        e.preventDefault();
+        return;
+      }
+    }
 
     if (
       (e.key === "}" || e.key === "]" || e.key === ")" || e.key === "$") &&
@@ -254,6 +318,7 @@ export default function CardEditor({ label, value, onChange }: Props) {
         onPaste={onPaste}
         onDrop={onDrop}
         onDragOver={(e) => e.preventDefault()}
+        spellCheck
         className="flex-1 min-h-[8rem] resize-none rounded border border-zinc-700 bg-zinc-900 px-3 py-2 font-mono text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
         placeholder="Markdown supported. Paste or drop images. $E=mc^2$ inline, $$\\int x dx$$ block."
       />
