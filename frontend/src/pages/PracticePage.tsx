@@ -161,7 +161,10 @@ export default function PracticePage() {
   useEffect(() => {
     if (!started || !card || editing) return;
     function onKey(e: KeyboardEvent) {
-      if ((e.target as HTMLElement)?.tagName?.match(/INPUT|TEXTAREA|SELECT/)) return;
+      const target = e.target as HTMLElement | null;
+      if (target?.tagName?.match(/INPUT|TEXTAREA|SELECT/)) return;
+      // Don't flip/grade the card behind an open dialog (e.g. the help modal).
+      if (target?.closest?.('[role="dialog"]')) return;
       if (e.key === " " || e.key === "Enter") {
         e.preventDefault();
         setShowBack((v) => !v);

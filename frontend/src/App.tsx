@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { NavLink, Navigate, Route, Routes } from "react-router-dom";
+import HelpModal from "./components/HelpModal";
 import HomePage from "./pages/HomePage";
 import SubjectsPage from "./pages/SubjectsPage";
 import SubjectDetailPage from "./pages/SubjectDetailPage";
@@ -8,6 +10,7 @@ import PracticePage from "./pages/PracticePage";
 import SettingsPage from "./pages/SettingsPage";
 import {
   CardsIcon,
+  HelpIcon,
   HomeIcon,
   PracticeIcon,
   SettingsIcon,
@@ -20,6 +23,8 @@ const navClass = ({ isActive }: { isActive: boolean }) =>
   }`;
 
 export default function App() {
+  const [helpOpen, setHelpOpen] = useState(false);
+
   return (
     <div className="flex h-full flex-col">
       <header className="flex items-center gap-2 border-b border-zinc-800 px-4 py-2">
@@ -46,7 +51,17 @@ export default function App() {
           <SettingsIcon />
           Settings
         </NavLink>
+        <button
+          onClick={() => setHelpOpen(true)}
+          className="ml-1 inline-flex items-center rounded-full p-1.5 text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+          title="How Flashcard works"
+          aria-label="Help"
+        >
+          <HelpIcon width={18} height={18} />
+        </button>
       </header>
+
+      {helpOpen && <HelpModal onClose={() => setHelpOpen(false)} />}
       <main className="flex-1 overflow-auto">
         <Routes>
           <Route path="/" element={<Navigate to="/home" replace />} />

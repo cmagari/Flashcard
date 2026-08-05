@@ -113,6 +113,28 @@ Override via `FLASHCARD_DATA_DIR` env var (used by the test suite). The Settings
 
 You can also pick a custom data folder from the Settings page ("Data folder → Choose folder…"). The choice is persisted in Electron's `userData/config.json` and is passed to the backend as `FLASHCARD_DATA_DIR` on every launch. "Reset to default" clears the override. Switching folders restarts the backend.
 
+## Drafts
+
+Any card can be marked **Draft** from the checkbox in the card editor (both the
+full page and the edit modal). A draft stays in your library and stays editable,
+but is held back from everything practice-related:
+
+- **Practice** never serves it, in any mode.
+- **Home stats** ignore it — totals, per-subject mastery bars, and the "needs
+  review" queue. An unattempted card scores the highest review weight, so
+  counting drafts would park them permanently at the top of a queue they can
+  never leave.
+- **Subjects** card counts still include drafts — that page is a library view.
+
+Home shows an amber **Drafts** tile with the outstanding count, linking to
+`/cards?draft=drafts`. The tile only appears when there is at least one draft.
+
+The Cards page has an **All cards / Drafts only / Finished only** filter — held
+in the URL (`?draft=drafts`) so it can be linked to — and draft cards carry an
+amber `Draft` badge in both the Cards and Subject views. The API exposes this as
+`is_draft` on a card, `drafts` in `GET /api/stats/home` totals, and
+`GET /api/cards?draft=true|false`.
+
 ## Practice modes
 
 - **Random** — uniform random pick from the filtered pool.
@@ -121,12 +143,56 @@ You can also pick a custom data folder from the Settings page ("Data folder → 
 
 Skips are not logged. Each card keeps only its 10 most recent attempts.
 
-## Keyboard shortcuts (Practice page)
+## In-app help
+
+The **?** button at the right of the header opens a modal covering the whole app
+broadly — the subject/card/practice loop, Markdown and LaTeX, images, tags,
+drafts, the three practice modes, and what Home's bars mean. Source:
+`frontend/src/components/HelpModal.tsx`.
+
+## Keyboard shortcuts
+
+The full list is shown in-app under **Settings → Keyboard shortcuts**.
+
+Practice page:
 
 - `Space` / `Enter` — flip card
 - `1` — Correct
 - `2` — Incorrect
 - `3` — Skip
+
+Card editor:
+
+- `Ctrl+B` / `Ctrl+I` / `Ctrl+U` — bold / italic / underline
+- `Enter` — continue the current markdown list (`-`, `*`, `+`, `1.`, `1)`, and
+  `- [ ]` task items); on an item with no content it strips the marker and
+  drops you out of the list. The marker must open the line, so `5 - 3` and
+  `version 1.5` mid-sentence are left alone, as is a `-` opening a line inside
+  a `$$…$$` block. `Shift+Enter` always inserts a plain newline.
+- `$`, `{`, `[`, `(` — wrap the selection; auto-close inside math
+- `\frac`, `\sqrt`, … — auto-insert `{}` argument braces inside math
+
+## Spell check
+
+Right-clicking in any text field opens a context menu with spelling suggestions
+("Add to dictionary" included) plus cut/copy/paste — the app has no menu bar, so
+this is the only place those live.
+
+Chromium is supposed to fetch its Hunspell dictionary from Google's CDN on first
+use, but on some machines that download is never even attempted, leaving
+`<userData>/Dictionaries` empty forever — nothing gets flagged and the menu has
+no corrections to offer. It *will* load a dictionary that is already on disk, so
+`electron/dictionaries/en-us-10-1.bdic` ships with the app and is copied into
+place at startup (`setUpSpellChecker` in `electron/main.js`).
+
+The filename must match what Chromium looks for: `<lang>-<feature version>.bdic`.
+If an Electron upgrade bumps that version, spellcheck goes quiet — refresh the
+bundled file from `https://redirector.gvt1.com/edgedl/chrome/dict/` and update
+the two constants in `main.js`. The startup log reports what happened:
+
+```
+[spellcheck] enabled=true languages=en-US dictionary=present
+```
 
 ## Settings page
 
@@ -145,8 +211,9 @@ frontend/  React + Vite + Tailwind + react-markdown + KaTeX
   src/pages/   Cards, Subjects, SubjectDetail, CardEdit, Practice, Settings
   src/components/  CardEditor, MarkdownView, CardPreview, Dialog, TagPicker
 electron/  Electron main + preload (sidecar lifecycle)
-  main.js      backend spawn (dev: uv run / prod: bundled exe)
+  main.js      backend spawn (dev: uv run / prod: bundled exe), context menu, spellcheck
   preload.js   exposes baseUrl + openPath via contextBridge
+  dictionaries/  bundled Hunspell dictionary (see "Spell check")
   icon.svg / icon.png / icon.ico   app icon (F in a blue rounded square)
 ```
 

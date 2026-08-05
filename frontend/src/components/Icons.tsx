@@ -51,6 +51,16 @@ export function PracticeIcon(props: IconProps) {
   );
 }
 
+export function HelpIcon(props: IconProps) {
+  return (
+    <svg {...base} {...props}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M9.3 9.2a2.8 2.8 0 1 1 3.7 2.65c-.6.22-1 .8-1 1.45v.4" />
+      <path d="M12 17h.01" />
+    </svg>
+  );
+}
+
 export function SettingsIcon(props: IconProps) {
   return (
     <svg {...base} {...props}>
