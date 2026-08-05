@@ -2,6 +2,45 @@ import { useEffect, useState } from "react";
 import { api, AppInfo, BackupInfo, setApiBaseUrl } from "../api";
 import { useAlert, useConfirm } from "../components/Dialog";
 
+interface Shortcut {
+  keys: string[];
+  action: string;
+  /** Text between keys: "or" for alternatives (default), "then" for sequences. */
+  joiner?: string;
+}
+
+const SHORTCUT_GROUPS: { title: string; items: Shortcut[] }[] = [
+  {
+    title: "Practice",
+    items: [
+      { keys: ["Space", "Enter"], action: "Flip card" },
+      { keys: ["1"], action: "Mark correct" },
+      { keys: ["2"], action: "Mark incorrect" },
+      { keys: ["3"], action: "Skip" },
+    ],
+  },
+  {
+    title: "Card editor",
+    items: [
+      { keys: ["Ctrl", "B"], action: "Bold", joiner: "+" },
+      { keys: ["Ctrl", "I"], action: "Italic", joiner: "+" },
+      { keys: ["Ctrl", "U"], action: "Underline", joiner: "+" },
+      { keys: ["Enter"], action: "Continue a list (next bullet or number)" },
+      { keys: ["Enter"], action: "On an empty list item: end the list" },
+      { keys: ["Shift", "Enter"], action: "Plain newline, no list marker", joiner: "+" },
+      { keys: ["$", "{", "[", "("], action: "Wraps the selection; auto-closes inside math" },
+      { keys: ["\\frac", "\\sqrt"], action: "Auto-inserts { } arguments inside math" },
+    ],
+  },
+  {
+    title: "Dialogs and modals",
+    items: [
+      { keys: ["Enter"], action: "Confirm" },
+      { keys: ["Esc"], action: "Cancel / close" },
+    ],
+  },
+];
+
 export default function SettingsPage() {
   const [info, setInfo] = useState<AppInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -192,6 +231,42 @@ export default function SettingsPage() {
       <h1 className="text-xl font-semibold">Settings</h1>
 
       {error && <p className="text-sm text-red-400">{error}</p>}
+
+      <section className="space-y-4 rounded border border-zinc-800 p-4">
+        <header className="flex items-baseline justify-between">
+          <h2 className="text-base font-medium text-zinc-100">Keyboard shortcuts</h2>
+          <span className="text-xs text-zinc-500">Reference</span>
+        </header>
+        {SHORTCUT_GROUPS.map((group) => (
+          <div key={group.title} className="space-y-1.5">
+            <h3 className="text-xs font-medium uppercase tracking-wide text-zinc-500">
+              {group.title}
+            </h3>
+            <dl className="divide-y divide-zinc-800/70 rounded border border-zinc-800">
+              {group.items.map((item) => (
+                <div
+                  key={item.action}
+                  className="flex items-center gap-3 px-3 py-1.5 text-sm"
+                >
+                  <dt className="flex flex-wrap items-center gap-1">
+                    {item.keys.map((k, i) => (
+                      <span key={i} className="flex items-center gap-1">
+                        {i > 0 && (
+                          <span className="text-xs text-zinc-600">
+                            {item.joiner ?? "or"}
+                          </span>
+                        )}
+                        <kbd>{k}</kbd>
+                      </span>
+                    ))}
+                  </dt>
+                  <dd className="flex-1 text-right text-zinc-300">{item.action}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        ))}
+      </section>
 
       <section className="space-y-3 rounded border border-zinc-800 p-4">
         <header className="flex items-baseline justify-between">
