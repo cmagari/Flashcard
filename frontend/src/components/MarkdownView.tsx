@@ -8,6 +8,8 @@ import { apiBaseUrl } from "../api";
 interface Props {
   source: string;
   className?: string;
+  disableLinks?: boolean;
+  hideImages?: boolean;
 }
 
 function rewriteImageUrl(src: string | undefined): string | undefined {
@@ -33,7 +35,12 @@ function normalizeBlockMath(src: string): string {
   );
 }
 
-export default function MarkdownView({ source, className }: Props) {
+export default function MarkdownView({
+  source,
+  className,
+  disableLinks = false,
+  hideImages = false,
+}: Props) {
   return (
     <div className={`markdown ${className ?? ""}`}>
       <ReactMarkdown
@@ -43,9 +50,14 @@ export default function MarkdownView({ source, className }: Props) {
           url.startsWith("app-image://") ? url : defaultUrlTransform(url)
         }
         components={{
-          img: ({ src, alt, ...rest }) => (
-            <img src={rewriteImageUrl(src as string)} alt={alt ?? ""} {...rest} />
-          ),
+          img: hideImages
+            ? () => null
+            : ({ src, alt, ...rest }) => (
+                <img src={rewriteImageUrl(src as string)} alt={alt ?? ""} {...rest} />
+              ),
+          ...(disableLinks
+            ? { a: ({ children }) => <span>{children}</span> }
+            : {}),
         }}
       >
         {normalizeBlockMath(source || "")}

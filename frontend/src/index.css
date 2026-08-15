@@ -111,6 +111,25 @@ kbd {
   padding: 0.3em 0.6em;
 }
 
+/* A single compact, fully rendered front for Home's review queue. */
+.review-markdown {
+  max-height: 2.5rem;
+  overflow: hidden;
+  line-height: 1.4;
+}
+.review-markdown p,
+.review-markdown .katex-display {
+  margin: 0;
+}
+.review-markdown .katex-display {
+  text-align: left;
+}
+.review-markdown img {
+  display: inline-block;
+  max-height: 2.25rem;
+  width: auto;
+}
+
 /* Compact preview used in card lists. Constrains font + image sizes so a small
    box fits both text and images at a glance. Overflow is clipped by the parent. */
 .markdown-mini .markdown {

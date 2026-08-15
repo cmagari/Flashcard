@@ -232,7 +232,7 @@ export default function PracticePage() {
               <p className="text-sm text-zinc-400">
                 Subjects{" "}
                 {subjectIds.length === 0
-                  ? "(all)"
+                  ? "(all default subjects)"
                   : `(${subjectIds.length} selected)`}
               </p>
               {subjectIds.length > 0 && (
@@ -258,17 +258,25 @@ export default function PracticePage() {
             <div className="mt-1 flex flex-wrap gap-1">
               {subjects.map((s) => {
                 const active = subjectIds.includes(s.id);
+                const optIn = !s.include_in_general_practice;
                 return (
                   <button
                     key={s.id}
                     onClick={() => toggleSubject(s.id)}
+                    title={
+                      optIn
+                        ? "Opt-in subject: excluded from general practice unless selected"
+                        : undefined
+                    }
                     className={`rounded-full border px-2 py-0.5 text-xs ${
                       active
                         ? "border-blue-500 bg-blue-700/40 text-white"
-                        : "border-zinc-700 text-zinc-300 hover:bg-zinc-800"
+                        : optIn
+                          ? "border-amber-800/70 text-amber-200 hover:bg-amber-950/40"
+                          : "border-zinc-700 text-zinc-300 hover:bg-zinc-800"
                     }`}
                   >
-                    {s.name}
+                    {s.name}{optIn && " · opt-in"}
                   </button>
                 );
               })}

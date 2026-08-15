@@ -193,6 +193,12 @@ export default function SubjectDetailPage() {
       {subject?.description && (
         <p className="text-sm text-zinc-400">{subject.description}</p>
       )}
+      {subject && !subject.include_in_general_practice && (
+        <p className="text-xs text-amber-300">
+          Opt-in practice: this subject is excluded from general practice unless
+          you select it explicitly.
+        </p>
+      )}
 
       <input
         value={q}

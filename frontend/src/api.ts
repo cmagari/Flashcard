@@ -58,6 +58,7 @@ export interface Subject {
   id: number;
   name: string;
   description: string;
+  include_in_general_practice: boolean;
   created_at: string;
   card_count: number;
 }
@@ -141,14 +142,22 @@ export const api = {
 
   // subjects
   listSubjects: () => request<Subject[]>("/api/subjects"),
-  createSubject: (name: string, description: string = "") =>
+  createSubject: (
+    name: string,
+    description: string = "",
+    include_in_general_practice: boolean = true,
+  ) =>
     request<Subject>("/api/subjects", {
       method: "POST",
-      body: JSON.stringify({ name, description }),
+      body: JSON.stringify({ name, description, include_in_general_practice }),
     }),
   updateSubject: (
     id: number,
-    data: Partial<{ name: string; description: string }>,
+    data: Partial<{
+      name: string;
+      description: string;
+      include_in_general_practice: boolean;
+    }>,
   ) =>
     request<Subject>(`/api/subjects/${id}`, {
       method: "PATCH",

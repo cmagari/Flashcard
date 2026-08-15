@@ -32,6 +32,10 @@ def _filtered_cards_query(
     stmt = stmt.where(Card.is_draft.is_(False))
     if subject_ids:
         stmt = stmt.where(Card.subject_id.in_(subject_ids))
+    else:
+        # With no explicit scope, hold back subjects the user marked opt-in.
+        # Selecting one explicitly bypasses this default-pool restriction.
+        stmt = stmt.where(Card.subject.has(include_in_general_practice=True))
     if tag_ids:
         for tid in tag_ids:
             sub = select(card_tags.c.card_id).where(card_tags.c.tag_id == tid)

@@ -43,6 +43,11 @@ def init_db() -> None:
 # existed. Additive only — SQLAlchemy's create_all does not ALTER tables.
 _ADDED_COLUMNS = [
     ("subjects", "description", "ALTER TABLE subjects ADD COLUMN description TEXT NOT NULL DEFAULT ''"),
+    (
+        "subjects",
+        "include_in_general_practice",
+        "ALTER TABLE subjects ADD COLUMN include_in_general_practice BOOLEAN NOT NULL DEFAULT 1",
+    ),
     ("cards", "is_draft", "ALTER TABLE cards ADD COLUMN is_draft BOOLEAN NOT NULL DEFAULT 0"),
 ]
 

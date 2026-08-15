@@ -137,6 +137,11 @@ amber `Draft` badge in both the Cards and Subject views. The API exposes this as
 
 ## Practice modes
 
+Subjects are included in general practice by default. Turn off **Include in
+general practice by default** while editing a subject to make it opt-in. When no
+subjects are selected, practice excludes opt-in subjects; selecting one
+explicitly includes it normally. Existing subjects migrate as included.
+
 - **Random** — uniform random pick from the filtered pool.
 - **In order** — iterates by `created_at` ascending; client tracks the cursor.
 - **Smart** — weighted random where weight = `1 + min(days_since_seen / 7, 5) + 3 * (1 - correct_ratio_last_10) + (2 if never seen else 0)`. Tunable in `backend/app/smart.py`.

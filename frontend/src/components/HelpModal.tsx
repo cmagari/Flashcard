@@ -70,7 +70,10 @@ export default function HelpModal({ onClose }: Props) {
               Subjects are the top-level grouping — one per topic you're studying.
               Open a subject to see just its cards, select several at once to move
               or duplicate them, and give it a description if the name isn't
-              enough on its own.
+              enough on its own. For material you only want occasionally, edit
+              the subject and turn off <strong className="text-zinc-100">Include
+              in general practice by default</strong>. It will then appear as
+              opt-in on the Practice screen and is only used when selected.
             </p>
           </Section>
 
@@ -102,7 +105,11 @@ export default function HelpModal({ onClose }: Props) {
           </Section>
 
           <Section title="Practice">
-            <p>Pick any mix of subjects and tags, then choose how cards are drawn:</p>
+            <p>
+              With no subjects selected, practice uses every default subject.
+              Select subjects explicitly to narrow the pool or add an opt-in
+              subject, then choose how cards are drawn:
+            </p>
             <ul className="ml-4 list-disc space-y-1">
               <li>
                 <strong className="text-zinc-100">Random</strong> — an even pick

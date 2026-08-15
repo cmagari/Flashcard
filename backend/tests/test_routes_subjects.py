@@ -6,6 +6,7 @@ def test_create_and_list_subject(client):
     assert r.status_code == 201
     body = r.json()
     assert body["name"] == "Physics"
+    assert body["include_in_general_practice"] is True
     assert body["card_count"] == 0
     assert "id" in body and "created_at" in body
 
@@ -14,6 +15,21 @@ def test_create_and_list_subject(client):
     items = r.json()
     assert len(items) == 1
     assert items[0]["name"] == "Physics"
+
+
+def test_subject_can_be_marked_opt_in_for_practice(client):
+    created = client.post(
+        "/api/subjects",
+        json={"name": "Reference", "include_in_general_practice": False},
+    ).json()
+    assert created["include_in_general_practice"] is False
+
+    updated = client.patch(
+        f"/api/subjects/{created['id']}",
+        json={"include_in_general_practice": True},
+    )
+    assert updated.status_code == 200
+    assert updated.json()["include_in_general_practice"] is True
 
 
 def test_duplicate_subject_name_returns_409(client):

@@ -52,6 +52,36 @@ def test_next_card_random_returns_from_filtered_pool(client, subject_id):
     assert seen_subjects == {subject_id}
 
 
+@pytest.mark.parametrize("mode", ["random", "inorder", "smart"])
+def test_general_practice_excludes_opt_in_subjects(client, subject_id, mode):
+    default_card = _make_card(client, subject_id, "default")
+    opt_in_subject = client.post(
+        "/api/subjects",
+        json={"name": "Rare", "include_in_general_practice": False},
+    ).json()["id"]
+    _make_card(client, opt_in_subject, "rare")
+
+    for _ in range(10):
+        body = client.get(f"/api/practice/next?mode={mode}").json()
+        assert body is not None
+        assert body["id"] == default_card
+
+
+@pytest.mark.parametrize("mode", ["random", "inorder", "smart"])
+def test_explicit_selection_includes_opt_in_subject(client, mode):
+    opt_in_subject = client.post(
+        "/api/subjects",
+        json={"name": "Rare", "include_in_general_practice": False},
+    ).json()["id"]
+    rare_card = _make_card(client, opt_in_subject, "rare")
+
+    body = client.get(
+        f"/api/practice/next?mode={mode}&subject_id={opt_in_subject}"
+    ).json()
+    assert body is not None
+    assert body["id"] == rare_card
+
+
 def test_inorder_advances_via_cursor(client, subject_id):
     ids = [_make_card(client, subject_id, f"c{i}") for i in range(3)]
     first = client.get(f"/api/practice/next?mode=inorder&subject_id={subject_id}").json()

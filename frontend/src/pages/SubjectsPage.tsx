@@ -8,6 +8,7 @@ export default function SubjectsPage() {
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [draftName, setDraftName] = useState("");
   const [draftDescription, setDraftDescription] = useState("");
+  const [draftIncluded, setDraftIncluded] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const confirm = useConfirm();
 
@@ -30,9 +31,10 @@ export default function SubjectsPage() {
       return;
     }
     try {
-      await api.createSubject(name, draftDescription.trim());
+      await api.createSubject(name, draftDescription.trim(), draftIncluded);
       setDraftName("");
       setDraftDescription("");
+      setDraftIncluded(true);
       setError(null);
       refresh();
     } catch (err) {
@@ -82,6 +84,15 @@ export default function SubjectsPage() {
           placeholder="Description (optional)"
           className="rounded border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-sm"
         />
+        <label className="flex items-center gap-2 text-xs text-zinc-400">
+          <input
+            type="checkbox"
+            checked={draftIncluded}
+            onChange={(e) => setDraftIncluded(e.target.checked)}
+            className="accent-blue-500"
+          />
+          Include in general practice by default
+        </label>
       </div>
       {error && <p className="text-sm text-red-400">{error}</p>}
       <ul className="divide-y divide-zinc-800 rounded border border-zinc-800">
@@ -113,11 +124,15 @@ function SubjectRow({ subject, onRenamed, onDeleted, onError }: RowProps) {
   const [editing, setEditing] = useState(false);
   const [nameDraft, setNameDraft] = useState(subject.name);
   const [descDraft, setDescDraft] = useState(subject.description);
+  const [includedDraft, setIncludedDraft] = useState(
+    subject.include_in_general_practice,
+  );
   const inputRef = useRef<HTMLInputElement>(null);
 
   function startEdit() {
     setNameDraft(subject.name);
     setDescDraft(subject.description);
+    setIncludedDraft(subject.include_in_general_practice);
     setEditing(true);
     requestAnimationFrame(() => inputRef.current?.focus());
   }
@@ -126,6 +141,7 @@ function SubjectRow({ subject, onRenamed, onDeleted, onError }: RowProps) {
     setEditing(false);
     setNameDraft(subject.name);
     setDescDraft(subject.description);
+    setIncludedDraft(subject.include_in_general_practice);
   }
 
   async function save() {
@@ -137,7 +153,9 @@ function SubjectRow({ subject, onRenamed, onDeleted, onError }: RowProps) {
     }
     const nameChanged = name !== subject.name;
     const descChanged = description !== subject.description;
-    if (!nameChanged && !descChanged) {
+    const includedChanged =
+      includedDraft !== subject.include_in_general_practice;
+    if (!nameChanged && !descChanged && !includedChanged) {
       setEditing(false);
       return;
     }
@@ -145,6 +163,9 @@ function SubjectRow({ subject, onRenamed, onDeleted, onError }: RowProps) {
       await api.updateSubject(subject.id, {
         ...(nameChanged ? { name } : {}),
         ...(descChanged ? { description } : {}),
+        ...(includedChanged
+          ? { include_in_general_practice: includedDraft }
+          : {}),
       });
       setEditing(false);
       onRenamed();
@@ -191,6 +212,15 @@ function SubjectRow({ subject, onRenamed, onDeleted, onError }: RowProps) {
             placeholder="Description (optional)"
             className="rounded border border-zinc-700 bg-zinc-900 px-2 py-1 text-sm"
           />
+          <label className="flex items-center gap-2 text-xs text-zinc-400">
+            <input
+              type="checkbox"
+              checked={includedDraft}
+              onChange={(e) => setIncludedDraft(e.target.checked)}
+              className="accent-blue-500"
+            />
+            Include in general practice by default
+          </label>
         </>
       ) : (
         <>
@@ -201,6 +231,14 @@ function SubjectRow({ subject, onRenamed, onDeleted, onError }: RowProps) {
             >
               {subject.name}
             </Link>
+            {!subject.include_in_general_practice && (
+              <span
+                className="rounded-full border border-amber-700/60 bg-amber-950/40 px-2 py-0.5 text-[0.65rem] font-medium text-amber-200"
+                title="Excluded when no subjects are selected; select it explicitly to practice it"
+              >
+                Opt-in practice
+              </span>
+            )}
             <span className="text-xs text-zinc-500">
               {subject.card_count} card{subject.card_count === 1 ? "" : "s"}
             </span>

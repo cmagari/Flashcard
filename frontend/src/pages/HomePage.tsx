@@ -9,6 +9,7 @@ import {
   api,
 } from "../api";
 import { PracticeIcon } from "../components/Icons";
+import MarkdownView from "../components/MarkdownView";
 
 const MASTERY_COLOR: Record<MasteryLevel, string> = {
   memorized: "bg-emerald-500",
@@ -69,9 +70,10 @@ export default function HomePage() {
               : "bg-blue-600 text-white hover:bg-blue-500")
           }
           aria-disabled={empty}
+          title="Practice all default subjects"
         >
           <PracticeIcon />
-          Practice all
+          General practice
         </Link>
       </header>
 
@@ -276,10 +278,19 @@ function ReviewRow({ card }: { card: ReviewCard }) {
       />
       <Link
         to={`/cards/${card.id}`}
-        className="min-w-0 flex-1 truncate text-sm text-zinc-200 hover:text-white"
+        className="min-w-0 flex-1 text-sm text-zinc-200 hover:text-white"
         title={preview}
       >
-        {preview || <span className="text-zinc-500">(empty)</span>}
+        {card.front_md.trim() ? (
+          <MarkdownView
+            source={card.front_md}
+            className="review-markdown"
+            disableLinks
+            hideImages
+          />
+        ) : (
+          <span className="text-zinc-500">(empty)</span>
+        )}
       </Link>
       <span className="hidden text-xs text-zinc-500 sm:inline">
         {card.subject_name}

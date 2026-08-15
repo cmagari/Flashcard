@@ -16,6 +16,7 @@ def _serialize(s: Subject, card_count: int) -> SubjectOut:
         id=s.id,
         name=s.name,
         description=s.description,
+        include_in_general_practice=s.include_in_general_practice,
         created_at=s.created_at,
         card_count=card_count,
     )
@@ -37,7 +38,11 @@ def create_subject(payload: SubjectCreate, session: Session = Depends(get_sessio
     name = payload.name.strip()
     if session.execute(select(Subject).where(Subject.name == name)).scalar_one_or_none():
         raise HTTPException(status.HTTP_409_CONFLICT, detail="Subject with that name already exists")
-    s = Subject(name=name, description=payload.description.strip())
+    s = Subject(
+        name=name,
+        description=payload.description.strip(),
+        include_in_general_practice=payload.include_in_general_practice,
+    )
     session.add(s)
     session.commit()
     session.refresh(s)
@@ -60,6 +65,8 @@ def update_subject(
         s.name = new_name
     if payload.description is not None:
         s.description = payload.description.strip()
+    if payload.include_in_general_practice is not None:
+        s.include_in_general_practice = payload.include_in_general_practice
     session.commit()
     session.refresh(s)
     count = session.execute(
